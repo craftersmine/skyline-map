@@ -90,15 +90,6 @@ figure { margin: 0; }
 .zoomable:hover img { opacity: 0.94; }
 
 /* the sign over the hero picture */
-.plate { position: absolute; left: calc(-1 * var(--s6)); bottom: var(--s8); width: min(300px, 70%); background: var(--ink); color: var(--paper); border: var(--bar) solid var(--ink); box-shadow: var(--float); font-family: var(--mono); }
-.plate-head { padding: var(--s3) var(--s4); font-weight: 800; font-size: 1.125rem; letter-spacing: -0.02em; border-bottom: var(--hair) solid var(--ink-rule); display: flex; align-items: center; gap: var(--s2); }
-.plate-head::before { content: ''; width: 10px; height: 10px; background: var(--cobalt-hi); }
-.plate dl { margin: 0; display: grid; grid-template-columns: 1fr 1fr; }
-.plate dl > div { padding: var(--s3) var(--s4); border-bottom: var(--hair) solid var(--ink-rule); }
-.plate dl > div:nth-child(odd) { border-right: var(--hair) solid var(--ink-rule); }
-.plate dl > div:nth-last-child(-n + 2) { border-bottom: 0; }
-.plate dt { font-size: 0.75rem; font-weight: 500; color: oklch(78% 0.012 250); }
-.plate dd { margin: 2px 0 0; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; color: var(--amber); font-variant-numeric: tabular-nums; }
 
 /* ---------- sections */
 .sec { padding-block: var(--s8) 0; display: grid; gap: var(--s6); }
@@ -210,8 +201,6 @@ figure { margin: 0; }
 /* ---------- responsive */
 @media (max-width: 64rem) {
   .hero { grid-template-columns: minmax(0, 1fr); min-height: 0; gap: var(--s6); padding-block: var(--s6) var(--s7); }
-  .plate { left: var(--s4); bottom: auto; top: var(--s4); width: min(260px, 64%); }
-  .plate dd { font-size: 1.2rem; }
   .split, .close-in { grid-template-columns: minmax(0, 1fr); }
   .panels, .mosaic { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mosaic .m-wide { grid-column: span 2; }
@@ -223,9 +212,6 @@ figure { margin: 0; }
   .grid-2, .grid-3, .panels, .mosaic, .pair { grid-template-columns: minmax(0, 1fr); }
   .grid-3 .span-2, .mosaic .m-wide { grid-column: auto; }
   .panels .panel, .pair .panel, .mosaic .panel { max-width: 440px; }
-  .plate { position: static; width: auto; border: 0; border-bottom: var(--bar) solid var(--ink); box-shadow: none; }
-  .plate dl > div { padding: var(--s2) var(--s4); }
-  .plate dd { font-size: 1.25rem; white-space: nowrap; }
   .board { min-width: 0; }
   .board th, .board td { padding: var(--s3); }
   .board thead th:nth-child(2) { display: none; }
@@ -237,7 +223,6 @@ figure { margin: 0; }
   .board tbody td.num { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
   .board thead tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
   .hero-visual { display: flex; flex-direction: column; }
-  .hero-visual .plate { order: 2; }
   .hero-visual figcaption { order: 3; }
   .tablist [role='tab'] { flex: 1 1 auto; padding: 0 var(--s3); }
   .compare-tag { top: var(--s2); }
