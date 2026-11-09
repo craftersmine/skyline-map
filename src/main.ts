@@ -742,24 +742,6 @@ map.on('pitch', updateExtrusion);
 let toastT = 0;
 function toast(msg: string) { const el = $('toast'); el.textContent = msg; el.hidden = false; clearTimeout(toastT); toastT = window.setTimeout(() => (el.hidden = true), 4500); }
 
-// MapLibre shades each terrain tile when it arrives; a tile whose neighbour arrives later
-// keeps a seam along that edge until it is re-shaded. Once terrain tiles settle, nudge the
-// hillshade layer so every tile is re-shaded with its neighbours' edges.
-let reshadeTimer = 0, reshadeQuietUntil = 0;
-(window as any).__reshades = 0;
-map.on('sourcedata', (e) => {
-  if (e.sourceId !== 'dem' || !e.tile || performance.now() < reshadeQuietUntil) return;
-  clearTimeout(reshadeTimer);
-  reshadeTimer = window.setTimeout(() => {
-    if (!map.getLayer('hillshade') || map.getLayoutProperty('hillshade', 'visibility') === 'none') return;
-    // hiding the layer for one frame drops the cached shading; it is rebuilt with all edges present
-    reshadeQuietUntil = performance.now() + 800; // the toggle itself must not re-trigger this
-    (window as any).__reshades++;
-    map.setLayoutProperty('hillshade', 'visibility', 'none');
-    requestAnimationFrame(() => map.setLayoutProperty('hillshade', 'visibility', 'visible'));
-  }, 250);
-});
-
 map.on('error', (e) => { if (!String(e.error?.message ?? '').includes('csldem')) console.warn('[map]', e.error?.message ?? e); });
 
 // ------------------------------------------------------------------ language
