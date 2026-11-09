@@ -16,6 +16,7 @@
     "check:reach": "tsx tools/reach-check.ts",
     "check:history": "tsx tools/history-check.ts",
     "check:discover": "tsx tools/discover-check.ts",
+    "check:closure": "tsx tools/closure-check.ts",
     "check:schematic": "tsx tools/schematic-check.ts",
     "check:i18n": "tsx tools/i18n-check.ts",
     "check:tolls": "tsx tools/toll-check.ts",

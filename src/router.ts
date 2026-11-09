@@ -2,7 +2,7 @@
 // a transit graph from the game's lines, then runs Dijkstra. Runs in the worker.
 import type { CityData, CSeg } from './parse';
 import { classify, laneInfo, modeOf, buildingGroups } from './build';
-import { toLngLat, pointInRing, distToRing, nearestOnLine, type XY } from './geo';
+import { toLngLat, fromLngLat, pointInRing, distToRing, nearestOnLine, type XY } from './geo';
 import type { OneWayResult } from './oneway';
 import type { TollData } from './tolls';
 import { laneAccess, hasVehicle, type Access } from './access';
@@ -26,6 +26,8 @@ interface Join { node: number; extra: number; part?: Edge; snap?: { e: number; p
 
 interface Edge {
   id: number; a: number; b: number; len: number; pts: XY[]; cls: string; name: string; speed: number; bike: boolean; brunnel: string;
+  /** closed for the closure being analysed (see setClosure): unusable by every mode */
+  x?: boolean;
   /** one-way: +1 traffic a→b, -1 b→a, 0 two-way; `sure` = backed by transit or keep-right evidence */
   /** one-way direction (+1 start→end, -1 end→start, 0 two-way) and how it is known:
    *  `sure` — inferred with evidence (transit vehicles or keep-right layout), obeyed as a rule;
@@ -94,7 +96,9 @@ export class Router {
   private pos: XY[] = [];
   private edges: Edge[] = [];
   private adj: number[][] = []; // node index → edge indices
-  private lines: { id: number; name: string; color: string; mode: string; stops: number[]; hops: { pts: XY[]; len: number; time: number }[] }[] = [];
+  private lines: { id: number; name: string; color: string; mode: string; stops: number[]; hops: { pts: XY[]; len: number; time: number; segs: number[]; x?: boolean }[] }[] = [];
+  /** stops of a closed station: lines run through without stopping (see setClosure) */
+  private closedStops = new Set<number>();
   private stopWalk = new Map<number, Join[]>(); // stop node → where it joins the walking network (+ seconds to reach)
   private stopPos = new Map<number, XY>();
 
@@ -151,7 +155,7 @@ export class Router {
         const L = Math.max(30, len(pts));
         const pcs = this.pieces(segs, mode, na);
         if (pcs.length) { const raw = pcs.reduce((t, q) => t + q.len, 0), cut = raw - L; trimPieces(pcs, cut, len(chain(segs, na, nb)), pts, na); }
-        return { pts, len: L, time: hopTime(pcs, mode) || L / 8 };
+        return { pts, len: L, time: hopTime(pcs, mode) || L / 8, segs: segs.map((q) => q.id) };
       });
       this.lines.push({ id: tr.id, name: tr.name, color: '#' + tr.color.map((v) => v.toString(16).padStart(2, '0')).join(''), mode, stops: tr.stops, hops });
       for (const sid of tr.stops) {
@@ -324,6 +328,7 @@ export class Router {
   }
 
   private allowed(e: Edge, mode: Mode): boolean {
+    if (e.x) return false;
     if (mode === 'drive') return e.acc.drive;
     if (mode === 'walk' || mode === 'transit') return e.acc.walk;
     return e.acc.bike || e.acc.bikeWalk;
@@ -838,7 +843,7 @@ export class Router {
     const alight: { node: number; extra: number }[][] = new Array(total - N);
     this.lines.forEach((l, li) => l.stops.forEach((sid, k) => {
       const ws = this.stopWalk.get(sid);
-      if (!ws) return;
+      if (!ws || this.closedStops.has(sid)) return;
       const st = offs[li] + k;
       alight[st - N] = ws;
       for (const w of ws) { const arr = boardAt.get(w.node) ?? []; arr.push({ st, extra: w.extra }); boardAt.set(w.node, arr); }
@@ -863,7 +868,7 @@ export class Router {
       } else {
         const li = lineOf(u), l = this.lines[li], k = u - offs[li];
         const nk = (k + 1) % l.stops.length;
-        relax(u, offs[li] + nk, l.hops[k].time + modeParams(l.mode).dwell);
+        if (!l.hops[k].x) relax(u, offs[li] + nk, l.hops[k].time + modeParams(l.mode).dwell);
         for (const w of alight[u - N] ?? []) relax(u, w.node, w.extra);
       }
     }
@@ -939,6 +944,177 @@ export class Router {
     return { mode: 'transit', dist: distSum, time: timeSum, via: legs.filter((l) => l.line).map((l) => l.line!.name).join(' → '), legs };
   }
 
+  // ---------------------------------------------------------------- closures (Network criticality)
+  /**
+   * Close road/rail segments and stations for the searches that follow, until called with nulls. A closed
+   * segment can't be driven, walked or cycled, and every line hop running over it is cut (the line still
+   * runs on either side: we don't invent diversions). At a closed station lines pass without stopping.
+   */
+  setClosure(segs: Set<number> | null, stops: Set<number> | null) {
+    for (const e of this.edges) e.x = !!segs && segs.has(e.id);
+    for (const l of this.lines) for (const h of l.hops) h.x = !!segs && h.segs.some((id) => segs.has(id));
+    this.closedStops = stops ?? new Set();
+  }
+  /** Graph node index of an export node id (-1 when it isn't on the walk/drive network). */
+  nodeIndex(id: number): number { return this.nodeIdx.get(id) ?? -1; }
+  /** Export segment ids that are part of the walk/drive/bike network, with the modes allowed on each. */
+  edgeAccess(id: number): { drive: boolean; walk: boolean; bike: boolean; ow: number; sure: boolean } | null {
+    const e = this.edges.find((x) => x.id === id);
+    return e ? { drive: e.acc.drive, walk: e.acc.walk, bike: e.acc.bike || e.acc.bikeWalk, ow: e.ow, sure: e.sure } : null;
+  }
+  /** Can a car drive this segment from its start node to its end node (fwd) or back, under the one-way rules? */
+  drivable(id: number, fwd: boolean): boolean { const e = this.edges.find((x) => x.id === id); return !!e && this.driveOk(e, fwd); }
+  /** Edges at a node usable by a mode (for walking out to the nearest junction). */
+  nodeDegree(i: number, mode: Mode): number { return this.adj[i].filter((ei) => this.allowed(this.edges[ei], mode)).length; }
+  /** The other end of the single other usable edge at a degree-2 node, coming from `fromSeg`; null otherwise. */
+  nextAlong(i: number, fromSeg: number, mode: Mode): { node: number; seg: number } | null {
+    const es = this.adj[i].filter((ei) => this.allowed(this.edges[ei], mode));
+    if (es.length !== 2) return null;
+    const e = this.edges[es[0]].id === fromSeg ? this.edges[es[1]] : this.edges[es[1]].id === fromSeg ? this.edges[es[0]] : null;
+    return e ? { node: e.a === i ? e.b : e.a, seg: e.id } : null;
+  }
+
+  /**
+   * Fastest trip from graph node a to node b, with its geometry. Driving runs over directed edges with the
+   * same one-way rules and turn costs as Directions; walking and cycling over the path network.
+   */
+  nodeRoute(a: number, b: number, mode: 'drive' | 'walk' | 'bike', max = 4 * 3600): { time: number; dist: number; coords: XY[]; segs: number[] } | null {
+    if (a < 0 || b < 0) return null;
+    const h = new Heap();
+    if (mode === 'drive') {
+      const E = this.edges.length, dist = new Float64Array(2 * E).fill(Infinity), prev = new Int32Array(2 * E).fill(-1);
+      for (const ei of this.adj[a]) {
+        const e = this.edges[ei];
+        for (const fwd of [true, false]) {
+          if ((fwd ? e.a : e.b) !== a || !this.driveOk(e, fwd)) continue;
+          const st = 2 * ei + (fwd ? 0 : 1), c = this.driveCost(e, fwd);
+          if (c < dist[st]) { dist[st] = c; h.push(c, st); }
+        }
+      }
+      let end = -1;
+      for (let top = h.pop(); top; top = h.pop()) {
+        const [d, st] = top;
+        if (d > dist[st]) continue;
+        const inE = this.edges[st >> 1], inFwd = !(st & 1), v = inFwd ? inE.b : inE.a;
+        if (v === b) { end = st; break; }
+        for (const ei of this.adj[v]) {
+          const e = this.edges[ei];
+          for (const fwd of [true, false]) {
+            if ((fwd ? e.a : e.b) !== v || !this.driveOk(e, fwd)) continue;
+            const ns = 2 * ei + (fwd ? 0 : 1), nd = d + this.turnCost(inE, inFwd, e, fwd, v) + this.driveCost(e, fwd);
+            if (nd < dist[ns] && nd <= max) { dist[ns] = nd; prev[ns] = st; h.push(nd, ns); }
+          }
+        }
+      }
+      if (end < 0) return null;
+      const chain: number[] = [];
+      for (let st = end; st !== -1; st = prev[st]) chain.unshift(st);
+      return this.pathOut(chain.map((st) => ({ e: st >> 1, fwd: !(st & 1) })), dist[end]);
+    }
+    const N = this.pos.length, dist = new Float64Array(N).fill(Infinity), via = new Int32Array(N).fill(-1);
+    dist[a] = 0; h.push(0, a);
+    for (let top = h.pop(); top; top = h.pop()) {
+      const [d, u] = top;
+      if (d > dist[u]) continue;
+      if (u === b) break;
+      for (const ei of this.adj[u]) {
+        const e = this.edges[ei];
+        if (!this.allowed(e, mode)) continue;
+        const v = e.a === u ? e.b : e.a, nd = d + this.cost(e, mode);
+        if (nd < dist[v] && nd <= max) { dist[v] = nd; via[v] = ei; h.push(nd, v); }
+      }
+    }
+    if (!(dist[b] < Infinity)) return null;
+    const path: { e: number; fwd: boolean }[] = [];
+    for (let v = b; via[v] !== -1;) { const e = this.edges[via[v]], fwd = e.b === v; path.unshift({ e: via[v], fwd }); v = fwd ? e.a : e.b; }
+    return this.pathOut(path, dist[b]);
+  }
+  private pathOut(path: { e: number; fwd: boolean }[], time: number) {
+    const coords: XY[] = [];
+    let dist = 0;
+    for (const { e, fwd } of path) { const ed = this.edges[e], p = fwd ? ed.pts : [...ed.pts].reverse(); coords.push(...(coords.length ? p.slice(1) : p)); dist += ed.len; }
+    return { time, dist, coords, segs: path.map((p) => this.edges[p.e].id) };
+  }
+
+  /**
+   * Segments that can no longer be reached from the main network (or left again) by a mode, under the current
+   * closure, that could be before it. Driving follows one-way rules both ways; walking ignores direction.
+   */
+  cutOff(mode: 'drive' | 'walk', closed: Set<number>): number[] {
+    const N = this.pos.length;
+    const usable = (e: Edge, fwd: boolean) => (mode === 'drive' ? this.driveOk(e, fwd) : this.allowed(e, 'walk'));
+    const bfs = (start: number, back: boolean) => {
+      const seen = new Uint8Array(N), st = [start]; seen[start] = 1;
+      while (st.length) {
+        const u = st.pop()!;
+        for (const ei of this.adj[u]) {
+          const e = this.edges[ei], fwd = e.a === u, v = fwd ? e.b : e.a;
+          if (seen[v] || !usable(e, back ? !fwd : fwd)) continue;
+          seen[v] = 1; st.push(v);
+        }
+      }
+      return seen;
+    };
+    // a reference junction in the largest network, as far from the closure as possible
+    const { id, size } = this.comp(mode);
+    const big = size.indexOf(Math.max(...size));
+    let cx = 0, cz = 0, n = 0;
+    for (const e of this.edges) if (closed.has(e.id)) { cx += e.pts[0][0]; cz += e.pts[0][1]; n++; }
+    if (!n || big < 0) return [];
+    cx /= n; cz /= n;
+    let ref = -1, rd = -1;
+    for (let i = 0; i < N; i++) if (id[i] === big) { const d = Math.hypot(this.pos[i][0] - cx, this.pos[i][1] - cz); if (d > rd) { rd = d; ref = i; } }
+    const saved = this.edges.map((e) => e.x);
+    for (const e of this.edges) e.x = false;
+    const f0 = bfs(ref, false), b0 = bfs(ref, true);
+    this.edges.forEach((e, i) => (e.x = saved[i]));
+    const f1 = bfs(ref, false), b1 = bfs(ref, true);
+    const lost = (v: number) => f0[v] && b0[v] && !(f1[v] && b1[v]);
+    return this.edges.filter((e) => !e.x && (mode === 'drive' ? e.acc.drive : e.acc.walk) && lost(e.a) && lost(e.b)).map((e) => e.id);
+  }
+
+  /** Line hops cut by the current closure, and lines with stops at closed stations. */
+  closureLines(): { cut: { id: number; name: string; color: string; mode: string; a: number; b: number; from: string; to: string; pa: XY | null; pb: XY | null }[]; skipped: { id: number; name: string; color: string; mode: string }[] } {
+    const cut: ReturnType<Router['closureLines']>['cut'] = [], skipped: ReturnType<Router['closureLines']>['skipped'] = [];
+    for (const l of this.lines) {
+      l.hops.forEach((h, k) => {
+        if (!h.x) return;
+        const a = l.stops[k], b = l.stops[(k + 1) % l.stops.length];
+        cut.push({ id: l.id, name: l.name, color: l.color, mode: l.mode, a, b, from: this.stopLabel(a), to: this.stopLabel(b), pa: this.stopPos.get(a) ?? null, pb: this.stopPos.get(b) ?? null });
+      });
+      if (l.stops.some((s) => this.closedStops.has(s))) skipped.push({ id: l.id, name: l.name, color: l.color, mode: l.mode });
+    }
+    return { cut, skipped };
+  }
+  /** Walking seconds from a point to the nearest stop not closed, among lines of the given modes, with its label. */
+  nearestOpenStop(from: XY, modes: string[]): { time: number; label: string; at: XY } | null {
+    const t0 = this.reachTimes(from, 'walk', 3600);
+    let best: { time: number; label: string; at: XY } | null = null;
+    for (const l of this.lines) {
+      if (!modes.includes(l.mode)) continue;
+      for (const sid of l.stops) {
+        if (this.closedStops.has(sid)) continue;
+        for (const w of this.stopWalk.get(sid) ?? []) {
+          const tt = t0[w.node] + w.extra;
+          if (tt < (best?.time ?? Infinity)) best = { time: tt, label: this.stopLabel(sid), at: this.stopPos.get(sid)! };
+        }
+      }
+    }
+    return best;
+  }
+  /** Fastest of transit and walking between two points: seconds and what it is, or null if neither works. */
+  bestTrip(from: XY, to: XY): { time: number; how: 'transit' | 'walk'; via: string; coords: XY[] } | null {
+    // the time is the exact optimum (transit search with walking, no preference penalties), so before and after
+    // compare fairly; the drawn route is Directions' pick for the same trip
+    const out = this.reachTimes(from, 'transit', 4 * 3600);
+    const time = this.withEnds('walk', [to], () => Math.min(...this.joins(to, 'walk').map((j) => out[j.node] + j.extra), Infinity));
+    if (!(time < Infinity)) return null;
+    const tr = this.route(from, to, 'transit')[0], wk = this.route(from, to, 'walk')[0];
+    const pick = tr && (!wk || tr.time < wk.time) ? tr : wk;
+    const coords = pick ? pick.legs.flatMap((l) => l.coords.map((c) => fromLngLat(c[0], c[1]))) : [];
+    return { time, how: pick === tr && tr ? 'transit' : 'walk', via: pick === tr && tr ? tr.via : '', coords };
+  }
+
   /** Node positions (game metres), indexed like the times from `reachTimes`. */
   nodePositions(): XY[] { return this.pos; }
 
@@ -1012,7 +1188,7 @@ export class Router {
       const alight: Join[][] = new Array(total - N);
       this.lines.forEach((l, li) => l.stops.forEach((sid, k) => {
         const ws = this.stopWalk.get(sid);
-        if (!ws) return;
+        if (!ws || this.closedStops.has(sid)) return;
         const st = offs[li] + k;
         alight[st - N] = ws;
         for (const w of ws) { const arr = boardAt.get(w.node) ?? []; arr.push({ st, extra: w.extra, li }); boardAt.set(w.node, arr); }
@@ -1029,7 +1205,8 @@ export class Router {
           for (const { st, extra, li } of boardAt.get(u) ?? []) relax(st, d + extra + modeParams(this.lines[li].mode).wait);
         } else {
           const li = lineOf(u), l = this.lines[li], k = u - offs[li];
-          relax(offs[li] + ((k + 1) % l.stops.length), d + l.hops[k].time + modeParams(l.mode).dwell);
+          const nk = (k + 1) % l.stops.length;
+          if (!l.hops[k].x) relax(offs[li] + nk, d + l.hops[k].time + modeParams(l.mode).dwell);
           for (const w of alight[u - N] ?? []) relax(w.node, d + w.extra);
         }
       }

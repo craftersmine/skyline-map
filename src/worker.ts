@@ -8,10 +8,12 @@ import { bestSchematic } from './schematic-render';
 import type { SchemInput } from './schematic';
 import { reachGrid } from './reach';
 import { discover } from './discover';
+import { createClosures, segInfoFrom } from './closure';
 import { cityKeys, scanExport, bornById, exportTime, type HistoryKeys } from './history';
 import type { CityData } from './parse';
 
 let router: Router | null = null;
+let closures: ReturnType<typeof createClosures> | null = null;
 let schemInput: SchemInput | null = null;
 const schemCache = new Map<string, unknown>();
 
@@ -51,6 +53,7 @@ self.onmessage = async (e: MessageEvent) => {
       try { built.discoveries = discover(city, built); } catch (err) { console.warn('[atlas] discoveries failed', err); built.discoveries = null; }
       progress('Preparing directions', 94);
       router = new Router(city, built.stopNames ?? new Map(), oneway, tolls);
+      closures = createClosures(city, router, segInfoFrom(built), built.stopNames ?? new Map());
       delete built.stopNames;
       schemInput = built.schem ?? null; schemCache.clear();
       delete built.schem;
@@ -63,6 +66,12 @@ self.onmessage = async (e: MessageEvent) => {
     } else if (msg.type === 'reach') {
       const grid = router ? reachGrid(router.nodePositions(), router.reachTimes(msg.from, msg.mode, msg.max), msg.max) : null;
       self.postMessage({ type: 'reach', id: msg.id, grid }, grid ? { transfer: [grid.t.buffer] } : {});
+    } else if (msg.type === 'closure') {
+      self.postMessage({ type: 'closure', id: msg.id, result: closures?.analyze(msg.pick) ?? null });
+    } else if (msg.type === 'closureReach') {
+      const r = router && closures?.reach(msg.pick, msg.from, msg.mode, msg.max);
+      const before = r ? reachGrid(router!.nodePositions(), r.before, msg.max) : null, after = r ? reachGrid(router!.nodePositions(), r.after, msg.max) : null;
+      self.postMessage({ type: 'closureReach', id: msg.id, before, after }, { transfer: [before?.t.buffer, after?.t.buffer].filter(Boolean) as ArrayBuffer[] });
     } else if (msg.type === 'historyStart' && lastCity) {
       history = cityKeys(lastCity, exportTime(lastCity.generated));
       self.postMessage({ type: 'historyStart', name: lastCity.name, time: exportTime(lastCity.generated) });

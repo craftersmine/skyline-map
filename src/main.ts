@@ -14,6 +14,7 @@ import { createMeasure } from './measure';
 import { createReach } from './reach-ui';
 import { createTimelapse } from './timelapse';
 import { createDiscoveries } from './discover-ui';
+import { createClosure, CLOSURE_ICON } from './closure-ui';
 import { createSchematic } from './schematic-view';
 import { createContextStore, createContextEditor, moneyField, parseMoney, describeRule } from './context-ui';
 import { bottomSheet, isPhone } from './sheet';
@@ -85,6 +86,7 @@ function applyStyle() {
   drawGlow();
   reach.refresh();
   timelapse.refresh();
+  closure.refresh();
   document.documentElement.dataset.theme = state.mode === 'night' ? 'dark' : 'light';
   if ((state.opts.contours || state.mode === 'terrain') && state.city && !state.contoursLoaded) requestContours();
   syncUi();
@@ -102,6 +104,7 @@ worker.onmessage = (e) => {
   else if (m.type === 'route') { if (!schem.onRoute(m)) dir.onResult(m); }
   else if (m.type === 'schematic') schem.onMessage(m);
   else if (m.type === 'reach') reach.onResult(m);
+  else if (m.type === 'closure' || m.type === 'closureReach') closure.onMessage(m);
   else if (m.type === 'contours') { (map.getSource('contours') as GeoJSONSource).setData(m.fc); state.contoursLoaded = true; }
 };
 function requestContours() { state.contoursLoaded = true; worker.postMessage({ type: 'contours', interval: 10, major: 50 }); }
@@ -127,6 +130,7 @@ function showCity(city: BuiltCity) {
   if (reach.isActive()) reach.close();
   timelapse.reset();
   discoveries.set(city.discoveries ?? null);
+  closure.reset();
   $('discoverBtn').hidden = !discoveries.count();
   state.city = city;
   state.contoursLoaded = false;
@@ -352,7 +356,7 @@ function describe(f: MapGeoJSONFeature, lng: number, lat: number) {
     const names = String(p.lines ?? p.name).split(' · ');
     panel(head(layer === 'busstop' ? t('Bus stop') : p.name || t('{mode} station', { mode: modeName(p.poi) }), `${modeName(p.poi)} · ${tn(names.length, '{n} line', '{n} lines')}`, iconDataUrl(p.poi, p.color)) +
       `<div class="p-rows">${names.map((n) => { const l = state.city!.meta.lines.find((x) => x.name === n); return `<div class="p-row"><span><i class="swatch" style="background:${l?.color ?? '#999'}"></i>${esc(n)}</span><span>${esc(l ? modeName(l.type) : '')}</span></div>`; }).join('')}</div>` +
-      `<div class="p-actions">${names.map((n) => { const l = state.city!.meta.lines.find((x) => x.name === n); return l ? `<button class="pill" data-line="${l.id}">${esc(t('Show {name}', { name: n }))}</button>` : ''; }).join('')}</div>`, p.color);
+      `<div class="p-actions">${names.map((n) => { const l = state.city!.meta.lines.find((x) => x.name === n); return l ? `<button class="pill" data-line="${l.id}">${esc(t('Show {name}', { name: n }))}</button>` : ''; }).join('')}${closeBtn({ kind: 'station', name: layer === 'station' ? p.name || undefined : undefined, at: fromLngLat(geom.coordinates[0], geom.coordinates[1]), scope: layer === 'busstop' ? 'road' : 'stretch' })}</div>`, p.color);
     setSelection([{ type: 'Feature', geometry: geom, properties: {} }]);
     return;
   }
@@ -397,7 +401,7 @@ function describeRest(f: MapGeoJSONFeature, p: any, layer: string, geom: any, ln
   setSelection(sel);
   const totalLen = p.name ? Math.round(sel.reduce((s, x) => s + lineLen(x.geometry.coordinates), 0)) : p.len;
   panel(head(name, (L(p.cls) ?? p.cls) + (p.brunnel === 'bridge' ? ' · ' + t('Bridge / elevated') : p.brunnel === 'tunnel' ? ' · ' + t('Tunnel') : '')) +
-    `<div class="p-rows">${row('Road type', p.type)}${row('District', p.district)}${row('Lanes', p.lanes || null)}${row('Speed limit', p.speed ? p.speed + ' km/h' : null)}${row('Bike lane', p.bike ? t('Yes') : null)}${row('Carriageway', p.w ? p.w + ' m' : null)}${row('One-way', p.oneway ? t('Yes') : null)}${row(p.name ? t('Total length') : t('Segment length'), totalLen ? (totalLen > 1000 ? (totalLen / 1000).toFixed(2) + ' km' : totalLen + ' m') : null)}${row('Elevation', p.z !== undefined ? Math.round(p.z) + ' m' : null)}</div>`);
+    `<div class="p-rows">${row('Road type', p.type)}${row('District', p.district)}${row('Lanes', p.lanes || null)}${row('Speed limit', p.speed ? p.speed + ' km/h' : null)}${row('Bike lane', p.bike ? t('Yes') : null)}${row('Carriageway', p.w ? p.w + ' m' : null)}${row('One-way', p.oneway ? t('Yes') : null)}${row(p.name ? t('Total length') : t('Segment length'), totalLen ? (totalLen > 1000 ? (totalLen / 1000).toFixed(2) + ' km' : totalLen + ' m') : null)}${row('Elevation', p.z !== undefined ? Math.round(p.z) + ' m' : null)}</div>${p.id !== undefined && !['runway', 'taxiway', 'canal', 'ferry'].includes(p.cls) ? `<div class="p-actions">${closeBtn({ kind: /rail|subway|monorail|tram|cablecar/.test(p.cls) ? 'rail' : 'road', seg: Number(p.id) })}</div>` : ''}`);
 }
 /** The district shown as a soft region (estimated: no district shapes in the export), redrawn on theme changes. */
 let glowDistrict: number | null = null;
@@ -428,11 +432,17 @@ function inPoly(pt: [number, number], rings: [number, number][][]) {
   const inside = (r: [number, number][]) => { let c = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++) { if ((r[i][1] > pt[1]) !== (r[j][1] > pt[1]) && pt[0] < ((r[j][0] - r[i][0]) * (pt[1] - r[i][1])) / (r[j][1] - r[i][1]) + r[i][0]) c = !c; } return c; };
   return inside(rings[0]) && !rings.slice(1).some(inside);
 }
+/** "What if it closes?" button for a panel */
+function closeBtn(p: import('./closure').ClosurePick) {
+  return `<button class="pill" data-close-pick="${esc(JSON.stringify(p))}"><svg viewBox="0 0 24 24" width="16" height="16"><path fill-rule="evenodd" d="${CLOSURE_ICON}"/></svg>${t('What if it closes?')}</button>`;
+}
 function lineLen(c: [number, number][]) { let l = 0; for (let i = 1; i < c.length; i++) { const a = fromLngLat(c[i - 1][0], c[i - 1][1]), b = fromLngLat(c[i][0], c[i][1]); l += Math.hypot(a[0] - b[0], a[1] - b[1]); } return l; }
 function coordText(lng: number, lat: number) { const [x, z] = fromLngLat(lng, lat); return `x ${Math.round(x)}, z ${Math.round(z)}`; }
 
 $('panelBody').addEventListener('click', (e) => {
   const t = e.target as HTMLElement;
+  const cp = (t.closest('[data-close-pick]') as HTMLElement | null)?.dataset.closePick;
+  if (cp) return closure.open(JSON.parse(cp));
   const dd = (t.closest('[data-dir]') as HTMLElement | null)?.dataset.dir;
   if (dd && panelPlace) { const pl = panelPlace; closePanel(); return dd === 'to' ? dir.setTo(pl) : dir.setFrom(pl); }
   const id = (t.closest('[data-line]') as HTMLElement | null)?.dataset.line;
@@ -458,6 +468,7 @@ map.on('click', (e) => {
   if (measure.isActive()) { measure.click(e); return; }
   if (reach.isActive()) { reach.click([e.lngLat.lng, e.lngLat.lat]); return; }
   if (discoveries.isActive()) return;
+  if (closure.isActive()) { closurePickAt(e.point); return; }
   if (dir.isOpen()) { dir.mapClick([e.lngLat.lng, e.lngLat.lat], placeLabelAt(e.point)); return; }
   const r = 6;
   const feats = map.queryRenderedFeatures([[e.point.x - r, e.point.y - r], [e.point.x + r, e.point.y + r]], { layers: interactive() });
@@ -508,14 +519,14 @@ const dir = createDirections({
   map, worker, city: () => state.city,
   pricing, editPricing: (tab, focus) => pricingEd.open(tab, focus),
   showOnSchematic: (route) => schem.open({ route }),
-  onOpen: () => { closePanel(); if (reach.isActive()) reach.close(); discoveries.close(); $('topbar').hidden = true; document.body.classList.add('dir-open'); },
+  onOpen: () => { closePanel(); if (reach.isActive()) reach.close(); discoveries.close(); closure.close(); $('topbar').hidden = true; document.body.classList.add('dir-open'); },
   onClose: () => { $('topbar').hidden = false; document.body.classList.remove('dir-open'); },
 });
 $('dirBtn').onclick = () => dir.open();
 $('dirFab').onclick = () => dir.open();
 
 const measure = createMeasure(map, {
-  onOpen: () => { closePanel(); if (dir.isOpen()) dir.close(); if (reach.isActive()) reach.close(); discoveries.close(); $('measureBtn').classList.add('on'); },
+  onOpen: () => { closePanel(); if (dir.isOpen()) dir.close(); if (reach.isActive()) reach.close(); discoveries.close(); closure.close(); $('measureBtn').classList.add('on'); },
   onClose: () => $('measureBtn').classList.remove('on'),
 });
 $('measureBtn').onclick = () => measure.toggle();
@@ -524,21 +535,43 @@ const reach = createReach(map, {
   worker,
   land: () => state.city?.districtField ?? null,
   night: () => state.mode === 'night',
-  onOpen: () => { closeDrawer(); closePanel(); if (dir.isOpen()) dir.close(); if (measure.isActive()) measure.close(); if (timelapse.isActive()) timelapse.close(); discoveries.close(); },
+  onOpen: () => { closeDrawer(); closePanel(); if (dir.isOpen()) dir.close(); if (measure.isActive()) measure.close(); if (timelapse.isActive()) timelapse.close(); discoveries.close(); closure.close(); },
 });
 $('reachBtn').onclick = () => { closeDrawer(); const c = map.getCenter(); reach.open([c.lng, c.lat]); };
 
 const timelapse = createTimelapse(map, {
   worker, city: () => state.city, currentFile: () => state.currentFile, toast,
-  onOpen: () => { closeDrawer(); closePanel(); if (reach.isActive()) reach.close(); if (measure.isActive()) measure.close(); discoveries.close(); },
+  onOpen: () => { closeDrawer(); closePanel(); if (reach.isActive()) reach.close(); if (measure.isActive()) measure.close(); discoveries.close(); closure.close(); },
 });
 $('timelapseBtn').onclick = () => timelapse.open();
 
 const discoveries = createDiscoveries(map, {
-  onOpen: () => { closeDrawer(); closePanel(); hideCtx(); if (dir.isOpen()) dir.close(); if (reach.isActive()) reach.close(); if (measure.isActive()) measure.close(); if (timelapse.isActive()) timelapse.close(); },
+  onOpen: () => { closeDrawer(); closePanel(); hideCtx(); if (dir.isOpen()) dir.close(); if (reach.isActive()) reach.close(); if (measure.isActive()) measure.close(); if (timelapse.isActive()) timelapse.close(); closure.close(); },
 });
 $('discoverBtn').onclick = () => (discoveries.isActive() ? discoveries.close() : discoveries.open());
 $('discoverMenu').onclick = () => discoveries.open();
+
+const closure = createClosure(map, {
+  worker, toast,
+  land: () => state.city?.districtField ?? null,
+  night: () => state.mode === 'night',
+  onOpen: () => { closeDrawer(); closePanel(); hideCtx(); if (dir.isOpen()) dir.close(); if (reach.isActive()) reach.close(); if (measure.isActive()) measure.close(); if (timelapse.isActive()) timelapse.close(); discoveries.close(); },
+});
+$('closureMenu').onclick = () => closure.open();
+/** What a click while closing picks: a station, a railway, or a road (nearest of each in a small box). */
+function closurePickAt(pt: { x: number; y: number }) {
+  const r = 8, box: [[number, number], [number, number]] = [[pt.x - r, pt.y - r], [pt.x + r, pt.y + r]];
+  const layers = (ids: string[]) => ids.filter((id) => map.getLayer(id) && map.getLayoutProperty(id, 'visibility') !== 'none');
+  // stations first (small targets on top of track), then whatever is drawn on top
+  const st = map.queryRenderedFeatures(box, { layers: layers(['station', 'busstop']) })[0];
+  if (st) { const c = (st.geometry as any).coordinates as [number, number]; return closure.pick({ kind: 'station', name: st.layer.id === 'station' ? (st.properties.name || undefined) : undefined, at: fromLngLat(c[0], c[1]), scope: st.layer.id === 'busstop' ? 'road' : 'stretch' }); }
+  const RAIL = ['ground-rail', 'bridge-rail', 'tunnel-rail', 'ground-subway', 'bridge-subway', 'ground-tram', 'bridge-tram', 'tunnel-tram'];
+  // a drawn transit line is also the only way to reach metro tunnels (they aren't drawn): it closes the track under it
+  for (const f of map.queryRenderedFeatures(box, { layers: layers([...RAIL, 'transit-line', 'bridge-fill', 'road-fill', 'tunnel-fill']) })) {
+    if (f.layer.id === 'transit-line') { if (f.properties.seg !== undefined && !['bus', 'tour'].includes(String(f.properties.mode))) return closure.pick({ kind: 'rail', seg: Number(f.properties.seg) }); continue; }
+    if (f.properties.id !== undefined) return closure.pick({ kind: RAIL.includes(f.layer.id) ? 'rail' : 'road', seg: Number(f.properties.id) });
+  }
+}
 
 /** Name of whatever labelled thing is under a screen point, else a generic pin label. */
 function placeLabelAt(pt: { x: number; y: number }): string {
@@ -745,7 +778,7 @@ onLang(() => {
   applyStatic(); renderLangSwitches(); applyStyle();
   if (state.city) { renderDrawer(state.city); cityTexts(state.city); }
   if (!$('panel').hidden) { if (panelRefresh) panelRefresh(); else closePanel(); }
-  dir.relang(); measure.refresh(); pricingEd.refresh(); schem.relang(); discoveries.refresh();
+  dir.relang(); measure.refresh(); pricingEd.refresh(); schem.relang(); discoveries.refresh(); closure.refresh();
   if (!$('welcome').hidden) loadLocalList();
 });
 renderLangSwitches();

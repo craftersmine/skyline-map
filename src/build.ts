@@ -595,7 +595,7 @@ export function buildCity(city: CityData, progress: (msg: string) => void = () =
       const slot = users.indexOf(tr.id);
       const offset = slot - (users.length - 1) / 2;
       for (const p of s.pts) { bb = [Math.min(bb[0], p.x), Math.min(bb[1], p.z), Math.max(bb[2], p.x), Math.max(bb[3], p.z)]; }
-      transit.push({ type: 'Feature', properties: { line: tr.id, name: tr.name, mode, color, offset, n: users.length, underground: /Tunnel/i.test(s.name) || (city.nodes.get(s.sn)?.ug ?? false) ? 1 : 0 }, geometry: { type: 'LineString', coordinates: s.pts.map(ll) } });
+      transit.push({ type: 'Feature', properties: { line: tr.id, seg: id, name: tr.name, mode, color, offset, n: users.length, underground: /Tunnel/i.test(s.name) || (city.nodes.get(s.sn)?.ug ?? false) ? 1 : 0 }, geometry: { type: 'LineString', coordinates: s.pts.map(ll) } });
     }
     const valid = bb[0] !== Infinity;
     const sw = valid ? toLngLat(bb[0], bb[1]) : null, ne = valid ? toLngLat(bb[2], bb[3]) : null;

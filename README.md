@@ -53,6 +53,7 @@ Guides at `/blog/` (exporting, finding files, transit maps, directions, tolls an
 | `src/reach.ts`, `src/reach-ui.ts` | How far can I get: node times → time grid (worker), time-band layer and panel (page) |
 | `src/history.ts`, `src/timelapse.ts` | City time-lapse: first-seen times from older exports (worker), slider and map filters (page) |
 | `src/discover.ts`, `src/discover-ui.ts` | City discoveries: records measured from the export (worker, `npm run check:discover`), collection panel, spotlight and gold map highlight (page) |
+| `src/closure.ts`, `src/closure-ui.ts` | What if it closes?: closes roads, bridges, tunnels, railways or stations in the router (worker, `npm run check:closure`), compares trips, cut lines, cut-off roads and 30-minute reach before and after (page) |
 | `src/tolls.ts` | Toll booths ↔ their gate/approach segments ↔ the roads they sit on |
 | `src/context.ts` | City pricing data: currency format, fare/transfer/toll maths, entity matching, import validation, IndexedDB |
 | `src/context-ui.ts` | Pricing store for the open city and the pricing editor sheet |
