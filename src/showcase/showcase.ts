@@ -35,20 +35,34 @@ for (const box of document.querySelectorAll<HTMLElement>('[data-tabs]')) {
   });
 }
 
-// The section line marks the section in view
+// The section line marks the section in view. It only scrolls its own strip sideways (never the page):
+// scrollIntoView here would hand the browser a page scroll and fight the reader's own scrolling.
+const line = document.querySelector<HTMLElement>('.line');
 const links = new Map([...document.querySelectorAll<HTMLAnchorElement>('.line a')].map((a) => [a.hash.slice(1), a]));
 const visible = new Map<string, number>();
+let current = '';
 const io = new IntersectionObserver((entries) => {
   for (const e of entries) visible.set(e.target.id, e.isIntersecting ? e.intersectionRatio : 0);
   let best = '', score = 0;
   for (const [id, r] of visible) if (r > score) { score = r; best = id; }
-  if (!best) document.querySelector('.line')?.scrollTo({ left: 0 });
-  for (const [id, a] of links) {
-    if (id === best) { a.setAttribute('aria-current', 'true'); a.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
-    else a.removeAttribute('aria-current');
-  }
+  if (best === current) return;
+  current = best;
+  for (const [id, a] of links) { if (id === best) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); }
+  if (!line || line.scrollWidth <= line.clientWidth) return;
+  const a = links.get(best);
+  line.scrollLeft = a ? Math.max(0, a.offsetLeft - (line.clientWidth - a.offsetWidth) / 2) : 0;
 }, { threshold: [0, 0.15, 0.3, 0.5], rootMargin: '-80px 0px -35% 0px' });
 for (const id of links.keys()) { const s = document.getElementById(id); if (s) io.observe(s); }
+// in-page links glide there (only on a click, so the page's own scrolling stays native)
+const glide = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+document.addEventListener('click', (e) => {
+  const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#"]');
+  const target = a && a.hash.length > 1 ? document.getElementById(a.hash.slice(1)) : null;
+  if (!target) return;
+  e.preventDefault();
+  target.scrollIntoView({ behavior: glide ? 'smooth' : 'auto', block: 'start' });
+  history.replaceState(null, '', a!.hash);
+});
 
 // Lightbox: the full-size screenshot
 const dlg = document.querySelector<HTMLDialogElement>('.lightbox')!;
