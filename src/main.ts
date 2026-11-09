@@ -524,6 +524,7 @@ const dir = createDirections({
   map, worker, city: () => state.city,
   pricing, editPricing: (tab, focus) => pricingEd.open(tab, focus),
   showOnSchematic: (route) => schem.open({ route }),
+  simRules: () => sim.hasRules(),
   onOpen: () => { closePanel(); sim.close(); if (reach.isActive()) reach.close(); discoveries.close(); closure.close(); $('topbar').hidden = true; document.body.classList.add('dir-open'); },
   onClose: () => { $('topbar').hidden = false; document.body.classList.remove('dir-open'); },
 });
@@ -566,6 +567,7 @@ $('closureMenu').onclick = () => closure.open();
 
 const sim = createSim(map, {
   worker, toast, city: () => state.city,
+  onRules: () => dir.rulesChanged(),
   selectLine: (id) => selectLine(id, true),
   onOpen: () => { closeDrawer(); closePanel(); hideCtx(); if (dir.isOpen()) dir.close(); if (reach.isActive()) reach.close(); if (measure.isActive()) measure.close(); if (timelapse.isActive()) timelapse.close(); discoveries.close(); closure.close(); },
 });

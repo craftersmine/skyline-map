@@ -14,6 +14,12 @@ import { readNet } from '../src/sim/net';
 import { readBuildings } from '../src/sim/buildings';
 import { readGrids } from '../src/sim/grids';
 import { validate } from '../src/sim/validate';
+import { buildRules } from '../src/sim/rules';
+import { readTmpe } from '../src/sim/tmpe';
+import { Router } from '../src/router';
+import { buildCity } from '../src/build';
+import { inferOneWay } from '../src/oneway';
+import { detectTolls } from '../src/tolls';
 
 const SAVES = process.env.CS_SAVES_DIR ?? path.join(os.homedir(), 'Library/Application Support/Colossal Order/Cities_Skylines/Saves');
 const EXPORTS = process.env.CSLMAP_DIR ?? path.join(os.homedir(), 'Library/Application Support/Steam/steamapps/common/Cities_Skylines/CSLMapView');
@@ -78,6 +84,56 @@ async function main() {
     on += g.noise[z * 256 + x]; flip += g.noise[(255 - z) * 256 + x]; n++;
   }
   check(on > flip * 2, `noise is higher on buildings than on the same cells mirrored north-south (${(on / n).toFixed(1)} vs ${(flip / n).toFixed(1)}), so rows run along +z`);
+
+  console.log('\n3b. Routing rules from the save');
+  {
+    const rules = buildRules(c, net, validate(c, net, bld, null).m.seg, readTmpe(sd.modData), sd.leftHandTraffic);
+    check(rules.summary.oneway > 1000 && rules.summary.speed > 50 && rules.summary.carBan > 0 && rules.summary.track > 0, `rules built: ${JSON.stringify(rules.summary)}`);
+    const ow = inferOneWay(c), tolls = detectTolls(c), built = buildCity(c, undefined, ow, tolls);
+    const plain = new Router(c, built.stopNames ?? new Map(), ow, tolls);
+    const ruled = new Router(c, built.stopNames ?? new Map(), ow, tolls);
+    ruled.applyRules(rules);
+    const edges = (ruled as any).edges as { id: number; a: number; b: number; ow: number; confirmed: boolean; pts: [number, number][]; acc: { drive: boolean }; noCar?: [boolean, boolean] }[];
+    check(edges.every((e) => !rules.oneway.has(e.id) || (e.ow === rules.oneway.get(e.id) && e.confirmed)), `every matched one-way edge follows the save's exact direction (${rules.oneway.size})`);
+    let seed = 11; const rnd = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 2 ** 32);
+    const drivable = edges.filter((e) => e.acc.drive);
+    const ends: [number, number][][] = [];
+    for (let k = 0; k < 150; k++) { const a = drivable[Math.floor(rnd() * drivable.length)], b = drivable[Math.floor(rnd() * drivable.length)]; ends.push([a.pts[a.pts.length >> 1], b.pts[b.pts.length >> 1]]); }
+    // legality: no edge against the exact direction, no car-banned direction, no banned U-turn
+    let illegal = 0, changed = 0, found = 0;
+    const nodeOf = (ruled as any).nodeIdx as Map<number, number>;
+    const bans = new Set(rules.uturnBan.map((u) => u.seg + ':' + nodeOf.get(u.node)));
+    for (const [p, q] of ends) {
+      const r = (ruled as any).driveRoute(p, q, new Map()) as { path: { e: number; fwd: boolean }[]; bent?: boolean } | null;
+      if (!r) continue;
+      found++;
+      r.path.forEach((st, i) => {
+        const e = edges[st.e], o = rules.oneway.get(e.id);
+        if (o !== undefined && (st.fwd ? 1 : -1) !== o) illegal++;
+        if (e.noCar?.[st.fwd ? 0 : 1]) illegal++;
+        const prev = r.path[i - 1];
+        if (prev && prev.e === st.e && bans.has(e.id + ':' + (prev.fwd ? e.b : e.a))) illegal++;
+      });
+      const a = plain.route(p, q, 'drive')[0], b = ruled.route(p, q, 'drive')[0];
+      if (a && b && (Math.abs(a.time - b.time) > 0.5 || a.dist !== b.dist)) changed++;
+    }
+    check(illegal === 0 && found > 100, `${found} drives with the save's rules break none of them (${changed} differ from the export-only router)`);
+    // the toggle and clearing restore today's behaviour exactly
+    let same = 0, sameOff = 0;
+    const ruled2 = new Router(c, built.stopNames ?? new Map(), ow, tolls); ruled2.applyRules(rules);
+    for (const [p, q] of ends.slice(0, 40)) {
+      const a = JSON.stringify(plain.route(p, q, 'drive'));
+      if (a === JSON.stringify(ruled2.route(p, q, 'drive', { rules: false }))) sameOff++;
+    }
+    ruled2.clearRules();
+    for (const [p, q] of ends.slice(0, 40)) if (JSON.stringify(plain.route(p, q, 'drive')) === JSON.stringify(ruled2.route(p, q, 'drive'))) same++;
+    check(sameOff === 40, `"rules off" gives exactly the export-only routes (${sameOff}/40)`);
+    check(same === 40, `clearing the rules restores exactly the export-only routes (${same}/40)`);
+    const metro = ((ruled as any).lines as { mode: string; hops: { time: number }[] }[]).filter((l) => l.mode === 'metro');
+    const metroPlain = ((plain as any).lines as { mode: string; hops: { time: number }[] }[]).filter((l) => l.mode === 'metro');
+    const tR = metro.reduce((s, l) => s + l.hops.reduce((a, h) => a + h.time, 0), 0), tP = metroPlain.reduce((s, l) => s + l.hops.reduce((a, h) => a + h.time, 0), 0);
+    check(rules.summary.track > 0 ? tR > tP : true, `metro ride times follow TM:PE's track limits: ${Math.round(tP)} s → ${Math.round(tR)} s over all metro hops`);
+  }
 
   console.log('\n4–5. Export and save from different moments');
   for (const [e, s, want, label] of [

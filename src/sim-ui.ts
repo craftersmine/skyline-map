@@ -9,7 +9,7 @@ import type { SimResult, SimData, SimFailure, SimLine } from './sim';
 type TmSeg = NonNullable<SimData['tmpe']>['segs'][number];
 import { toLngLat } from './geo';
 import { roadWidth } from './style';
-import { t, locale } from './i18n';
+import { t, tn, locale } from './i18n';
 import { bottomSheet } from './sheet';
 
 type Layer = 'none' | 'traffic' | 'landValue' | 'noise' | 'pollution' | 'crime';
@@ -53,14 +53,15 @@ void ['Simulation data', 'Close', 'Enhance your map with real traffic, populatio
   'From your save', 'This object doesn\'t match the save, so no simulation data is shown for it.',
   'Residents', 'Households', 'Workers now', 'Students', 'Visitors now', 'Happiness', 'Traffic', 'Speed limit (TM:PE)', 'Default speed for this road type (TM:PE)', 'Parking', 'Not allowed', 'One side only', 'No limit',
   'Passengers per week', '{res} residents · {tour} tourists', 'Last full week', 'Car trips saved', 'as the game shows it',
-  'Simulation data loaded', 'Simulation data removed'];
+  'Simulation data loaded', 'Simulation data removed', 'Used for directions',
+  'Directions, reach and closures now follow the traffic rules in your save: {list}.', 'Left-hand traffic: one-way directions and per-direction rules aren\'t applied yet.', 'Traffic density is shown, never used as a speed.'];
 // end i18n-keys
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const num = (v: number) => v.toLocaleString(locale());
 const pct = (v: number) => `${v.toLocaleString(locale(), { maximumFractionDigits: 1 })}%`;
 
-export function createSim(map: MLMap, deps: { worker: Worker; city: () => BuiltCity | null; onOpen: () => void; selectLine: (id: number) => void; toast: (m: string) => void }) {
+export function createSim(map: MLMap, deps: { worker: Worker; city: () => BuiltCity | null; onOpen: () => void; selectLine: (id: number) => void; toast: (m: string) => void; onRules: () => void }) {
   const st = {
     open: false, busy: false, step: '', file: '', id: 0,
     data: null as SimData | null, fail: null as SimFailure | null,
@@ -100,13 +101,14 @@ export function createSim(map: MLMap, deps: { worker: Worker; city: () => BuiltC
     if (m.type === 'simProgress') { st.step = m.step ?? ''; render(); return; }
     st.busy = false;
     const r = m.result!;
-    if (r.ok) { apply(r); deps.toast(t('Simulation data loaded')); }
+    if (r.ok) { apply(r); deps.toast(t('Simulation data loaded')); if (r.rulesSummary) deps.onRules(); }
     else { st.fail = r; }
     render();
   }
 
   function apply(r: SimData) {
-    clear();
+    // the worker applied this save's rules itself just before replying; only reset what the page shows
+    clearView();
     st.data = r; st.fail = null;
     if (r.traffic) for (let i = 0; i < r.traffic.ids.length; i++) st.traffic.set(r.traffic.ids[i], r.traffic.pct[i]);
     if (r.buildings) for (let i = 0; i < r.buildings.ids.length; i++) st.bld.set(r.buildings.ids[i], i);
@@ -114,9 +116,16 @@ export function createSim(map: MLMap, deps: { worker: Worker; city: () => BuiltC
     if (r.lines) for (const l of r.lines) st.lines.set(l.id, l);
     if (st.layer !== 'none') draw();
   }
-  function clear() {
+  function clearView() {
     st.data = null; st.traffic.clear(); st.bld.clear(); st.tm.clear(); st.lines.clear();
     removeLayers();
+  }
+  /** drop the save entirely: what the page shows and the traffic rules in the worker's router */
+  function clear() {
+    const hadRules = !!st.data?.rulesSummary;
+    clearView();
+    deps.worker.postMessage({ type: 'simClear' });
+    if (hadRules) deps.onRules();
   }
 
   // ---------------------------------------------------------------- map layers
@@ -251,6 +260,19 @@ export function createSim(map: MLMap, deps: { worker: Worker; city: () => BuiltC
       ${near ? `<p class="sim-note">${esc(t('{roads} of {nroads} roads and {blds} of {nblds} buildings match.', { roads: num(v.segments.verified), nroads: num(v.segments.exported), blds: num(v.buildings.verified), nblds: num(v.buildings.exported) }))}</p>` : ''}
       <p class="sim-note">${[d.save.city ? esc(t('Save: {city}', { city: d.save.city })) : '', d.save.gameDate ? esc(t('In game {date}', { date: fmtDate(d.save.gameDate) })) : '', d.save.savedAt ? esc(t('Saved {date}', { date: fmtDate(d.save.savedAt, true) })) : ''].filter(Boolean).join(' · ')}</p></div>`;
   }
+  function rulesInfo(d: SimData) {
+    const r = d.rulesSummary;
+    if (!r) return '';
+    const parts = [
+      r.oneway ? tn(r.oneway, '{n} one-way road', '{n} one-way roads') : '',
+      r.speed ? tn(r.speed, '{n} road with a TM:PE speed limit', '{n} roads with TM:PE speed limits') : '',
+      r.carBan ? tn(r.carBan, '{n} road closed to cars in a direction', '{n} roads closed to cars in a direction') : '',
+      r.uturnBan ? tn(r.uturnBan, '{n} no-U-turn rule', '{n} no-U-turn rules') : '',
+      r.track ? tn(r.track, '{n} track or road with a TM:PE limit for transit', '{n} tracks or roads with TM:PE limits for transit') : '',
+    ].filter(Boolean);
+    if (!parts.length) return '';
+    return `<h4>${t('Used for directions')}</h4><p class="sim-note sim-rules">${esc(t('Directions, reach and closures now follow the traffic rules in your save: {list}.', { list: parts.join(', ') }))}${r.leftHand ? ' ' + esc(t('Left-hand traffic: one-way directions and per-direction rules aren\'t applied yet.')) : ''} ${esc(t('Traffic density is shown, never used as a speed.'))}</p>`;
+  }
   function layerPicker(d: SimData) {
     const avail = (l: Layer) => l === 'none' || (l === 'traffic' ? !!d.traffic : !!d.grids);
     return `<h4>${t('Map layer')}</h4><div class="sim-layers" role="radiogroup">${LAYERS.filter(avail).map((l) => `<button role="radio" aria-checked="${st.layer === l}" data-layer="${l}">${esc(layerName(l))}</button>`).join('')}</div>${legend(st.layer)}`;
@@ -288,7 +310,7 @@ export function createSim(map: MLMap, deps: { worker: Worker; city: () => BuiltC
     else {
       const d = st.data;
       const un = d.unavailable.map((k) => t(k === 'buildings' ? 'building occupancy' : k === 'transit' ? 'transit ridership' : k === 'tmpe' ? 'traffic rules' : k === 'city' ? 'city statistics' : 'map layers'));
-      body = status(d) + layerPicker(d) + cityStats(d) + ridership(d) +
+      body = status(d) + rulesInfo(d) + layerPicker(d) + cityStats(d) + ridership(d) +
         (un.length ? `<p class="sim-note">${esc(t('Some data couldn\'t be read from this save: {list}.', { list: un.join(', ') }))}</p>` : '') +
         `<div class="tl-actions sim-foot"><button class="pill" data-a="pick">${t('Choose another save')}</button><button class="pill" data-a="remove">${t('Remove simulation data')}</button></div>`;
     }
@@ -355,6 +377,8 @@ export function createSim(map: MLMap, deps: { worker: Worker; city: () => BuiltC
   return {
     open, close, onMessage, buildingHtml, roadHtml, lineHtml,
     isOpen: () => st.open,
+    /** the worker's router follows this save's traffic rules */
+    hasRules: () => !!st.data?.rulesSummary,
     loaded: () => !!st.data,
     /** a new map was opened: simulation data belonged to the old one */
     reset() { clear(); st.fail = null; st.busy = false; st.id++; st.layer = 'none'; close(); },

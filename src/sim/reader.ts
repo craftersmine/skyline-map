@@ -275,6 +275,8 @@ export interface SaveData {
   /** in-game date and time (SimulationMetaData.m_currentDateTime), ISO without zone */
   gameDate: string | null;
   cityName: string | null;
+  /** the city drives on the left (SimulationMetaData.m_invertTraffic == True; the game treats Undefined as right-hand) */
+  leftHandTraffic: boolean;
   /** byte offset of each manager's begin tag, in stream order */
   sections: Map<Manager, number>;
   /** mod data blobs stored by the save (SimulationManager.m_serializableDataStorage) */
@@ -295,7 +297,7 @@ export function openSaveData(bytes: Uint8Array): SaveData {
   const nOverride = s.i32();
   if (nOverride < 0 || nOverride > 100000) throw new SaveError('corrupt', 'bad metadata');
   for (let i = 0; i < nOverride; i++) { s.ustr(); s.bool(); }
-  s.u8(); s.u8();
+  const invertTraffic = s.u8(); s.u8(); // m_invertTraffic (MetaBool: 0 undefined, 1 false, 2 true), m_disableAchievements
   const ticks = s.i64();
   let gameDate: string | null = null;
   try { gameDate = new Date(Number((ticks - TICKS_EPOCH) / 10000n)).toISOString().slice(0, 19); } catch { gameDate = null; }
@@ -324,7 +326,7 @@ export function openSaveData(bytes: Uint8Array): SaveData {
     if (at < 0) continue; // a manager this save doesn't have
     sections.set(m, at); from = at + 1;
   }
-  return { bytes, version, gameDate, cityName: null, sections, modData };
+  return { bytes, version, gameDate, cityName: null, leftHandTraffic: invertTraffic === 2, sections, modData };
 }
 
 /**

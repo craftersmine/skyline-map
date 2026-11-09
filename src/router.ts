@@ -8,6 +8,7 @@ import type { TollData } from './tolls';
 import { laneAccess, hasVehicle, type Access } from './access';
 import { hopTime, legRideTime, modeParams, type Piece } from './transit-time';
 import { t } from './i18n';
+import type { SimRules } from './sim/rules';
 
 export type Mode = 'drive' | 'transit' | 'walk' | 'bike';
 
@@ -40,7 +41,16 @@ interface Edge {
   acc: Access;
   /** heading leaving node a into the edge, and leaving node b into the edge */
   hA: number; hB: number;
+  /** traffic rules from a matched save (see applyRules): car speed per direction a→b / b→a (m/s) */
+  spd?: [number, number];
+  /** traffic rules from a matched save: closed to private cars a→b / b→a */
+  noCar?: [boolean, boolean];
 }
+
+type Hop = { pts: XY[]; len: number; time: number; segs: number[]; x?: boolean; timeOf: (limit?: PieceLimit) => number };
+/** km/h override for a piece of track/road and the vehicle type riding it, or undefined to keep the export's */
+type PieceLimit = (seg: CSeg, vType: string) => number | undefined;
+type RuleFields = Pick<Edge, 'ow' | 'sure' | 'confirmed' | 'speed' | 'spd' | 'noCar'>;
 
 export interface Step { text: string; dist: number; time: number; at: XY; maneuver: string; road?: string; /** toll steps: the booth passed */ booth?: number }
 export interface Leg {
@@ -96,7 +106,7 @@ export class Router {
   private pos: XY[] = [];
   private edges: Edge[] = [];
   private adj: number[][] = []; // node index → edge indices
-  private lines: { id: number; name: string; color: string; mode: string; stops: number[]; hops: { pts: XY[]; len: number; time: number; segs: number[]; x?: boolean }[] }[] = [];
+  private lines: { id: number; name: string; color: string; mode: string; stops: number[]; hops: Hop[] }[] = [];
   /** stops of a closed station: lines run through without stopping (see setClosure) */
   private closedStops = new Set<number>();
   private stopWalk = new Map<number, Join[]>(); // stop node → where it joins the walking network (+ seconds to reach)
@@ -153,9 +163,13 @@ export class Router {
         // stops sit part-way along a segment, but the path lists whole segments at both ends: trim to the stops
         const pts = trimTo(chain(segs, na, nb), na, nb);
         const L = Math.max(30, len(pts));
-        const pcs = this.pieces(segs, mode, na);
-        if (pcs.length) { const raw = pcs.reduce((t, q) => t + q.len, 0), cut = raw - L; trimPieces(pcs, cut, len(chain(segs, na, nb)), pts, na); }
-        return { pts, len: L, time: hopTime(pcs, mode) || L / 8, segs: segs.map((q) => q.id) };
+        // hop time from its pieces; kept as a function so a save's speed rules can recompute it (applyRules)
+        const timeOf = (limit?: PieceLimit) => {
+          const pcs = this.pieces(segs, mode, na, limit);
+          if (pcs.length) { const raw = pcs.reduce((t, q) => t + q.len, 0), cut = raw - L; trimPieces(pcs, cut, len(chain(segs, na, nb)), pts, na); }
+          return hopTime(pcs, mode) || L / 8;
+        };
+        return { pts, len: L, time: timeOf(), segs: segs.map((q) => q.id), timeOf };
       });
       this.lines.push({ id: tr.id, name: tr.name, color: '#' + tr.color.map((v) => v.toString(16).padStart(2, '0')).join(''), mode, stops: tr.stops, hops });
       for (const sid of tr.stops) {
@@ -302,7 +316,7 @@ export class Router {
   }
 
   /** Road/track pieces of one hop with their speed limits, and the junction + turn between pieces. */
-  private pieces(segs: CSeg[], mode: string, start?: { x: number; z: number }): Piece[] {
+  private pieces(segs: CSeg[], mode: string, start?: { x: number; z: number }, override?: PieceLimit): Piece[] {
     const vType = modeParams(mode).vType;
     const out: Piece[] = [];
     let cur: XY | null = start ? [start.x, start.z] : null;
@@ -312,7 +326,7 @@ export class Router {
       if (cur && Math.hypot(pts[pts.length - 1][0] - cur[0], pts[pts.length - 1][1] - cur[1]) < Math.hypot(pts[0][0] - cur[0], pts[0][1] - cur[1])) pts = pts.reverse();
       const st = this.city.segTypes.get(s.name);
       const lanes = (st?.lanes ?? []).filter((l) => hasVehicle(l.vType, vType) || (vType === 'Car' && hasVehicle(l.vType, 'Tram')));
-      const limit = Math.max(0, ...lanes.map((l) => l.speed)) * 50;
+      const limit = override?.(s, vType) ?? Math.max(0, ...lanes.map((l) => l.speed)) * 50;
       if (prevPts && out.length) {
         // junction between the previous piece and this one
         const shared = [s.sn, s.en].find((n) => n === segs[k - 1].sn || n === segs[k - 1].en);
@@ -329,13 +343,16 @@ export class Router {
 
   private allowed(e: Edge, mode: Mode): boolean {
     if (e.x) return false;
-    if (mode === 'drive') return e.acc.drive;
+    if (mode === 'drive') return e.acc.drive && !(e.noCar?.[0] && e.noCar[1]);
     if (mode === 'walk' || mode === 'transit') return e.acc.walk;
     return e.acc.bike || e.acc.bikeWalk;
   }
-  private cost(e: Edge, mode: Mode): number {
+  private cost(e: Edge, mode: Mode, fwd?: boolean): number {
     // cars rarely hold the posted limit in town (traffic, signals): 85% on ordinary streets, full speed on highways
-    if (mode === 'drive') return e.len / (e.speed * (/^(motorway|motorway_link|trunk)$/.test(e.cls) ? 1 : 0.85)) + (e.cls === 'minor' || e.cls === 'service' ? 2 : 0);
+    if (mode === 'drive') {
+      const v = e.spd && fwd !== undefined ? e.spd[fwd ? 0 : 1] : e.speed;
+      return e.len / (v * (/^(motorway|motorway_link|trunk)$/.test(e.cls) ? 1 : 0.85)) + (e.cls === 'minor' || e.cls === 'service' ? 2 : 0);
+    }
     if (mode === 'bike') return e.acc.bike ? (e.len / BIKE) * (e.bike ? 0.8 : 1) : e.len / WALK; // push the bike on footpaths
     return e.len / WALK;
   }
@@ -374,7 +391,12 @@ export class Router {
     return best;
   }
 
-  route(from: XY, to: XY, mode: Mode, opts: { avoidTolls?: boolean } = {}): Route[] {
+  route(from: XY, to: XY, mode: Mode, opts: { avoidTolls?: boolean; rules?: boolean } = {}): Route[] {
+    // the save's traffic rules apply by default once loaded; `rules: false` compares against the export alone
+    if (opts.rules === false && this.rulesOn) {
+      this.setRules(false);
+      try { return this.route(from, to, mode, { ...opts, rules: undefined }); } finally { this.setRules(true); }
+    }
     return this.withEnds(mode, [from, to], () => {
       if (mode === 'transit') return this.transit(from, to);
       this.avoidTolls = mode === 'drive' && !!opts.avoidTolls;
@@ -506,12 +528,12 @@ export class Router {
     }
   }
   /** Inferred one-ways are rules; the last-resort search may break a likely (keep-right) one, never a confirmed one. */
-  private driveOk(e: Edge, fwd: boolean) { return this.allowed(e, 'drive') && !(e.ow !== 0 && e.sure && (fwd ? 1 : -1) !== e.ow && (!this.relaxed || e.confirmed)); }
+  private driveOk(e: Edge, fwd: boolean) { return this.allowed(e, 'drive') && !e.noCar?.[fwd ? 0 : 1] && !(e.ow !== 0 && e.sure && (fwd ? 1 : -1) !== e.ow && (!this.relaxed || e.confirmed)); }
   /** Time on the edge; against a likely-but-unproven one-way it is heavily penalised, never banned. */
   /** The fixed parts of driveCost (wrong-way penalty, 'Avoid tolls' gate hour): paid in full on any stretch of the edge. */
   private wrongWayFixed(e: Edge, fwd: boolean) { return (e.ow !== 0 && (fwd ? 1 : -1) !== e.ow ? (e.sure ? 600 : 90) : 0) + (this.avoidTolls && e.gate ? 3600 : 0); }
   private driveCost(e: Edge, fwd: boolean) {
-    const base = this.cost(e, 'drive') + (this.avoidTolls && e.gate ? 3600 : 0); // 'Avoid tolls': an hour per gate, so only unavoidable tolls remain
+    const base = this.cost(e, 'drive', fwd) + (this.avoidTolls && e.gate ? 3600 : 0); // 'Avoid tolls': an hour per gate, so only unavoidable tolls remain
     if (e.ow !== 0 && (fwd ? 1 : -1) !== e.ow) return e.sure ? base * 30 + 600 : base * 6 + 90; // `sure` only reachable when relaxed
     return base;
   }
@@ -525,6 +547,7 @@ export class Router {
   private turnCost(inE: Edge, inFwd: boolean, outE: Edge, outFwd: boolean, v: number) {
     const deg = this.driveDegree(v);
     const uturn = inE === outE;
+    if (uturn && this.uturnBan.size && this.uturnBan.has(inE.id + ':' + v)) return Infinity; // a save's rule: no U-turn here
     if (deg <= 2) return uturn ? (deg === 1 ? 25 : 600) : 0;
     const arrive = (inFwd ? inE.hB : inE.hA) + Math.PI, depart = outFwd ? outE.hA : outE.hB;
     let d = ((depart - arrive) * 180) / Math.PI;
@@ -950,6 +973,70 @@ export class Router {
    * segment can't be driven, walked or cycled, and every line hop running over it is cut (the line still
    * runs on either side: we don't invent diversions). At a closed station lines pass without stopping.
    */
+  // ---------------------------------------------------------------- traffic rules from a matched save
+  private ruleEdits: { e: Edge; base: RuleFields; rule: RuleFields }[] = [];
+  private hopEdits: { h: Hop; base: number; rule: number }[] = [];
+  private uturnRule = new Set<string>();
+  private uturnBan = new Set<string>();
+  private rulesOn = false;
+
+  /**
+   * Use the rules a matched save holds (sim/rules.ts): exact one-way directions, TM:PE speed limits and
+   * car restrictions, explicit no-U-turn ends, and TM:PE limits on transit pieces. The export's own values
+   * are kept, so clearRules (or a `rules: false` route) restores today's behaviour exactly.
+   */
+  applyRules(r: SimRules) {
+    this.clearRules();
+    const byId = new Map(this.edges.map((e) => [e.id, e]));
+    const ids = new Set([...r.oneway.keys(), ...r.speed.keys(), ...r.carBan.keys()]);
+    for (const id of ids) {
+      const e = byId.get(id);
+      if (!e) continue;
+      const base: RuleFields = { ow: e.ow, sure: e.sure, confirmed: e.confirmed, speed: e.speed, spd: e.spd, noCar: e.noCar };
+      const rule: RuleFields = { ...base };
+      const ow = r.oneway.get(id);
+      if (ow !== undefined) { rule.ow = ow; rule.sure = true; rule.confirmed = true; }
+      const sp = r.speed.get(id);
+      if (sp) {
+        const f = sp[0] ?? sp[1]!, b = sp[1] ?? sp[0]!;
+        rule.spd = [f / 3.6, b / 3.6]; rule.speed = Math.max(f, b) / 3.6;
+      }
+      const ban = r.carBan.get(id);
+      if (ban) rule.noCar = ban;
+      this.ruleEdits.push({ e, base, rule });
+    }
+    if (r.trackLimit.size) {
+      const limit: PieceLimit = (seg, vType) => {
+        const m = r.trackLimit.get(seg.id);
+        if (!m) return undefined;
+        const v = m.get(vType) ?? (vType === 'Car' ? m.get('Tram') : undefined);
+        return v;
+      };
+      for (const l of this.lines) for (const h of l.hops) {
+        if (!h.segs.some((id) => r.trackLimit.has(id))) continue;
+        const t2 = h.timeOf(limit);
+        if (t2 !== h.time) this.hopEdits.push({ h, base: h.time, rule: t2 });
+      }
+    }
+    for (const u of r.uturnBan) { const v = this.nodeIdx.get(u.node); if (v !== undefined) this.uturnRule.add(u.seg + ':' + v); }
+    this.setRules(true);
+  }
+  clearRules() {
+    this.setRules(false);
+    this.ruleEdits = []; this.hopEdits = []; this.uturnRule = new Set();
+  }
+  /** what the applied rules changed, for the page */
+  rulesSummary() { return { edges: this.ruleEdits.length, hops: this.hopEdits.length, uturns: this.uturnRule.size }; }
+  private setRules(on: boolean) {
+    if (on === this.rulesOn) return;
+    for (const x of this.ruleEdits) Object.assign(x.e, on ? x.rule : x.base);
+    for (const x of this.hopEdits) x.h.time = on ? x.rule : x.base;
+    this.uturnBan = on ? this.uturnRule : new Set();
+    this.rulesOn = on;
+    // access may have changed: rebuild components and junction degrees lazily
+    this.comps.clear(); this.degree.clear();
+  }
+
   setClosure(segs: Set<number> | null, stops: Set<number> | null) {
     for (const e of this.edges) e.x = !!segs && segs.has(e.id);
     for (const l of this.lines) for (const h of l.hops) h.x = !!segs && h.segs.some((id) => segs.has(id));

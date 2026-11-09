@@ -45,6 +45,8 @@ export interface DirectionsDeps {
   editPricing: (tab: 'tolls' | 'fares', focus?: { line?: number; booth?: number }) => void;
   /** draw a transit route on the schematic transit map */
   showOnSchematic: (r: Route) => void;
+  /** a matched save's traffic rules are loaded in the worker's router (see sim/rules.ts) */
+  simRules: () => boolean;
 }
 
 export function createDirections(d: DirectionsDeps) {
@@ -67,7 +69,7 @@ export function createDirections(d: DirectionsDeps) {
       <button class="icon-btn dir-swap" title="Reverse starting point and destination" aria-label="Swap" data-i18n-title="Reverse starting point and destination" data-i18n-aria="Swap">${svg('<path d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3 5 6.99h3V14h2V6.99h3L9 3z"/>')}</button>
       <div class="dir-suggest" hidden></div>
     </div>
-    <div class="dir-options"><label><input type="checkbox" id="dirAvoidTolls" /> <span data-i18n="Avoid tolls">Avoid tolls</span></label></div>
+    <div class="dir-options"><label><input type="checkbox" id="dirAvoidTolls" /> <span data-i18n="Avoid tolls">Avoid tolls</span></label><label id="dirRulesRow" hidden title="One-way directions, TM:PE speed limits, car restrictions and U-turn bans from your save" data-i18n-title="One-way directions, TM:PE speed limits, car restrictions and U-turn bans from your save"><input type="checkbox" id="dirRules" checked /> <span data-i18n="Traffic rules from my save">Traffic rules from my save</span></label></div>
     </div>
     <div class="dir-sheet"><div class="dir-body"></div></div>`;
   document.body.appendChild(el);
@@ -83,7 +85,7 @@ export function createDirections(d: DirectionsDeps) {
   });
 
   const st = {
-    from: null as Place | null, to: null as Place | null, mode: 'drive' as Mode, avoidTolls: false,
+    from: null as Place | null, to: null as Place | null, mode: 'drive' as Mode, avoidTolls: false, rules: true,
     results: {} as Partial<Record<Mode, Route[]>>, sel: 0, req: 0, active: 'to' as 'from' | 'to', expanded: false,
   };
 
@@ -150,7 +152,7 @@ export function createDirections(d: DirectionsDeps) {
     if (!st.from || !st.to) { render(); return; }
     const id = ++st.req;
     const from = fromLngLat(...st.from.ll), to = fromLngLat(...st.to.ll);
-    for (const m of MODES) worker.postMessage({ type: 'route', id, mode: m.id, from, to, avoidTolls: st.avoidTolls });
+    for (const m of MODES) worker.postMessage({ type: 'route', id, mode: m.id, from, to, avoidTolls: st.avoidTolls, rules: st.rules });
     render();
   }
   function onResult(msg: { id: number; mode: Mode; routes: Route[] }) {
@@ -296,6 +298,15 @@ export function createDirections(d: DirectionsDeps) {
 
   const avoid = $<HTMLInputElement>('#dirAvoidTolls');
   avoid.addEventListener('change', () => { st.avoidTolls = avoid.checked; compute(); });
+  const rulesBox = $<HTMLInputElement>('#dirRules');
+  rulesBox.addEventListener('change', () => { st.rules = rulesBox.checked; compute(); });
+  /** the save's rules were loaded or removed: show the switch while they exist, and re-route */
+  function rulesChanged() {
+    const on = d.simRules();
+    $<HTMLElement>('#dirRulesRow').hidden = !on;
+    if (!on) { st.rules = true; rulesBox.checked = true; }
+    if (st.from && st.to) compute();
+  }
 
   // autocomplete for the two fields
   let sugItems: { place: Place; sub: string; icon: string }[] = [];
@@ -328,7 +339,7 @@ export function createDirections(d: DirectionsDeps) {
   sug.addEventListener('mousedown', (e) => { const i = (e.target as HTMLElement).closest('[data-i]') as HTMLElement | null; if (i) { e.preventDefault(); setPoint(st.active, sugItems[+i.dataset.i!].place); sug.hidden = true; } });
 
   return {
-    open, close, isOpen, onResult, redraw: () => drawRoutes(),
+    open, close, isOpen, onResult, redraw: () => drawRoutes(), rulesChanged,
     /** language changed: relabel and re-ask the worker, whose step text is in the UI language */
     relang() { applyStatic(el); if (isOpen()) compute(); },
     /** a click on the map while directions are open fills the active empty field */

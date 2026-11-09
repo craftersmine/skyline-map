@@ -93,6 +93,35 @@ Every value mirrors the game field, and the game code, that the game's own UI us
 Grid orientation is checked in `check:sim`: noise on building cells is about 6× the noise on the same
 cells mirrored north–south.
 
+## Routing with the save's traffic rules
+
+A matched save also changes how Directions, "How far can I get?" and "What if it closes?" route. This applies
+to matched segments only (`src/sim/rules.ts`, `Router.applyRules`):
+
+| Rule | From | Effect |
+|---|---|---|
+| Exact one-way direction | lane direction (export) + the segment's `Invert` flag (save), the game's own rule (`PathFind.cs:779`) | replaces the inferred direction; never driven against |
+| TM:PE speed limit | per lane, else TM:PE's default for the road type, else the prefab limit | car speed per direction (the existing 85% town factor stays) |
+| TM:PE vehicle restriction | a direction where no car lane admits passenger cars | closed to driving |
+| TM:PE junction restriction | explicit "no U-turn" at a segment end | U-turn there forbidden |
+| TM:PE limits on transit pieces | lane and road-type limits for the vehicle riding them (e.g. metro tracks held to 60 km/h) | transit ride times |
+
+- **Not a speed:** traffic density never enters a travel time.
+- **Toggle:** Directions shows a "Traffic rules from my save" switch while rules are loaded, to compare
+  against the export alone. Removing the save restores the export-only router exactly.
+- **Left-hand traffic:** one-way and per-direction rules are skipped until a left-hand save has been tested;
+  the road-type transit limits and U-turn bans still apply.
+- **Effect in the test city:**
+  - 1,416 exact one-ways, 49 of which the inference had wrong;
+  - 107 roads with TM:PE limits, 10 roads closed to cars in a direction, 390 transit pieces;
+  - 103 of 150 random drives change;
+  - metro ride time rises 12%;
+  - one trip goes from 11 min via the toll expressway to 6 min on 서빛서랑대로.
+- **Checks (`check:sim`, section 3b):**
+  - no drive breaks a rule;
+  - "rules off" and cleared rules both reproduce the export-only routes byte for byte.
+- **Phase 2, not yet:** lane arrows and lane connections as turn restrictions (docs/research/routing-rules.md).
+
 ## Deliberately not shown
 
 - **Age groups.** In the test city the district counts give 85 seniors while the raw citizen ages give

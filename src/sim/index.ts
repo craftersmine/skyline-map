@@ -10,7 +10,8 @@ import { readOccupancy } from './citizens';
 import { readTransport, type SaveLine } from './transport';
 import { readCityStats, type CityStats } from './city';
 import { readGrids } from './grids';
-import { readTmpe, TMPE_UNLIMITED_KMH } from './tmpe';
+import { readTmpe, TMPE_UNLIMITED_KMH, type TmpeData } from './tmpe';
+import { buildRules, type SimRules } from './rules';
 import { md5 } from './md5';
 import { validate, M, type Validation } from './validate';
 
@@ -54,6 +55,10 @@ export interface SimData {
   grids: { landValue: Uint16Array; noise: Uint16Array; crime: Uint16Array; pollution: Uint8Array } | null;
   /** features whose save section could not be read (reason codes, not shown verbatim) */
   unavailable: string[];
+  /** routing rules for the worker's router (stripped before the result goes to the page) */
+  rules?: SimRules;
+  /** what the rules contain, for the page */
+  rulesSummary: SimRules['summary'] | null;
   ms: number;
 }
 
@@ -95,12 +100,14 @@ export async function loadSim(buf: ArrayBuffer, city: CityData, step: (s: string
     const traffic = trafficOf(city, net, m.seg);
     const occ = tryRead('buildings', () => readOccupancy(sd, bld));
     const buildings = occ ? buildingsOf(city, m.bld, occ, bld) : null;
-    const tmpe = tryRead('tmpe', () => tmpeOf(city, sd, net, m.seg));
+    const tmpeData = tryRead('tmpe', () => readTmpe(sd.modData));
+    const tmpe = tmpeData ? tmpeOf(city, tmpeData, net, m.seg) : null;
+    const rules = tryRead('rules', () => buildRules(city, net, m.seg, tmpeData, sd.leftHandTraffic)) ?? undefined;
     const lines = transport ? linesOf(transport.lines, m.line) : null;
     const cityStats = tryRead('city', () => readCityStats(sd));
     const g = tryRead('grids', () => readGrids(sd));
     const grids = g ? { landValue: g.landValue, noise: g.noise, crime: g.crime, pollution: g.groundPollution } : null;
-    return { ok: true, save, v, traffic, buildings, tmpe, lines, city: cityStats, grids, unavailable, ms: Math.round(performance.now() - t0) };
+    return { ok: true, save, v, traffic, buildings, tmpe, lines, city: cityStats, grids, unavailable, rules, rulesSummary: rules?.summary ?? null, ms: Math.round(performance.now() - t0) };
   } catch (err) {
     if (err instanceof SaveError) return { ok: false, code: err.code, detail: err.message, save };
     if (err instanceof RangeError) return { ok: false, code: 'truncated', detail: err.message, save };
@@ -126,9 +133,7 @@ function buildingsOf(city: CityData, bm: Uint8Array, occ: ReturnType<typeof read
 }
 
 /** TM:PE rules, attached through the save's own lane chains to matched segments only. */
-function tmpeOf(city: CityData, sd: SaveData, net: SaveNet, seg: Uint8Array): SimData['tmpe'] {
-  const t = readTmpe(sd.modData);
-  if (!t) return null;
+function tmpeOf(city: CityData, t: TmpeData, net: SaveNet, seg: Uint8Array): SimData['tmpe'] {
   const laneSeg = new Map<number, number>();
   for (const s of city.segs) {
     if (seg[s.id] !== M.Verified) continue;

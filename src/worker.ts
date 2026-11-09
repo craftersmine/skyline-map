@@ -62,7 +62,7 @@ self.onmessage = async (e: MessageEvent) => {
       const df = built.districtField;
       self.postMessage({ type: 'city', city: built }, { transfer: [built.dem.surface.buffer, ...(df ? [df.l1.buffer, df.d1.buffer, df.l2.buffer, df.d2.buffer, df.land.buffer] : [])] });
     } else if (msg.type === 'route') {
-      const routes = router ? router.route(msg.from, msg.to, msg.mode, { avoidTolls: !!msg.avoidTolls }) : [];
+      const routes = router ? router.route(msg.from, msg.to, msg.mode, { avoidTolls: !!msg.avoidTolls, rules: msg.rules }) : [];
       self.postMessage({ type: 'route', id: msg.id, mode: msg.mode, routes });
     } else if (msg.type === 'reach') {
       const grid = router ? reachGrid(router.nodePositions(), router.reachTimes(msg.from, msg.mode, msg.max), msg.max) : null;
@@ -96,8 +96,13 @@ self.onmessage = async (e: MessageEvent) => {
       void ['Reading save file', 'Checking it matches this map', 'Reading simulation data'];
       // end i18n-keys
       if (!lastCity) { self.postMessage({ type: 'sim', id: msg.id, result: { ok: false, code: 'corrupt', detail: 'no map open' } }); return; }
+      router?.clearRules();
       const result = await loadSim(msg.buffer, lastCity, (step) => self.postMessage({ type: 'simProgress', id: msg.id, step }));
+      // a matched save's traffic rules drive routing from now on (directions, reach, closures, transit times)
+      if (result.ok) { if (result.rules && router) router.applyRules(result.rules); delete result.rules; }
       self.postMessage({ type: 'sim', id: msg.id, result }, { transfer: transferables(result) });
+    } else if (msg.type === 'simClear') {
+      router?.clearRules();
     } else if (msg.type === 'lang') {
       setLang(msg.lang, false); // directions text is written in the UI language
     } else if (msg.type === 'contours' && lastHeight) {
