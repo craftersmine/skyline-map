@@ -70,6 +70,6 @@ export default defineConfig({
   worker: { format: 'es' },
   build: {
     target: 'es2022', chunkSizeWarningLimit: 2000,
-    rollupOptions: { input: { main: path.resolve(__dirname, 'index.html'), showcase: path.resolve(__dirname, 'showcase.html') } },
+    rollupOptions: { input: { main: path.resolve(__dirname, 'index.html'), showcase: path.resolve(__dirname, 'showcase.html'), notFound: path.resolve(__dirname, '404.html') } },
   },
 });

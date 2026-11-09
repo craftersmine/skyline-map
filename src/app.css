@@ -105,6 +105,7 @@ svg { fill: currentColor; }
 .brand .logo { width: 26px; height: 26px; border-radius: 8px; background: conic-gradient(from 210deg, #34a853 0 25%, #fbbc04 0 50%, #ea4335 0 75%, #4285f4 0); position: relative; }
 .brand .logo::after { content: ''; position: absolute; inset: 7px; border-radius: 50%; background: #fff; }
 .brand.big { font-size: 26px; gap: 12px; }
+h1.brand { margin: 0; }
 .brand.big .logo { width: 34px; height: 34px; border-radius: 10px; }
 .brand.big .logo::after { inset: 9px; }
 .city-title { font-size: 20px; font-weight: 700; margin: 4px 20px 2px; }
@@ -175,6 +176,8 @@ svg { fill: currentColor; }
 .ff-copy.done { background: #188038; }
 .ff-steps { margin: 10px 0 0; padding-left: 20px; display: grid; gap: 4px; line-height: 1.55; }
 .ff-steps kbd, .ff-alt kbd { display: inline-block; min-width: 1.6em; margin: 0 1px; padding: 0 5px; border: 1px solid #c6cad0; border-bottom-width: 2px; border-radius: 5px; background: #fff; font: 600 12px/1.6 -apple-system, 'Segoe UI', Pretendard, sans-serif; color: #202124; text-align: center; }
+.ff-static { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 6px; font-size: 12.5px; }
+.ff-static code { font: 12px/1.45 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; overflow-wrap: anywhere; }
 .ff-alt { margin: 8px 0 0; font-size: 12.5px; color: #80868b; }
 @media (max-width: 520px) { .ff-path { flex-direction: column; } .ff-copy { padding: 9px 14px; } }
 .tour-link { display: flex; align-items: center; gap: 14px; margin-top: 14px; padding: 10px 14px 10px 10px; border: 1px solid #e3e5e8; border-radius: 16px; color: #202124; text-decoration: none; transition: border-color .15s, background-color .15s; }
