@@ -7,7 +7,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc",
-    "check": "node src/geo.check.ts && node src/context.check.ts",
+    "check": "node src/geo.check.ts && node src/context.check.ts && node src/findfile.check.ts",
     "check:oneway": "tsx tools/oneway-check.ts",
     "deploy": "npm run build && wrangler deploy",
     "check:access": "tsx tools/access-check.ts",

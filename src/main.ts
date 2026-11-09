@@ -13,6 +13,7 @@ import { createMeasure } from './measure';
 import { createSchematic } from './schematic-view';
 import { createContextStore, createContextEditor, moneyField, parseMoney, describeRule } from './context-ui';
 import { bottomSheet, isPhone } from './sheet';
+import { mountFindFile } from './findfile';
 import { t, tn, initLang, setLang, onLang, applyStatic, getLang, LANGS, locale, type Lang } from './i18n';
 
 initLang();
@@ -191,6 +192,7 @@ async function loadLocalList() {
   } catch { /* static hosting: no local listing */ }
 }
 
+mountFindFile($('findFile'));
 $('fileInput').addEventListener('change', (e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) openFile(f); });
 let dragDepth = 0;
 window.addEventListener('dragenter', (e) => { e.preventDefault(); dragDepth++; $('dropOverlay').hidden = false; });

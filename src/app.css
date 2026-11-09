@@ -158,6 +158,25 @@ svg { fill: currentColor; }
 .dropzone { display: flex; flex-direction: column; align-items: center; gap: 6px; border: 2px dashed #c6cad0; border-radius: 16px; padding: 26px; cursor: pointer; transition: border-color .15s, background .15s; text-align: center; font-size: 14.5px; }
 .dropzone:hover, .dropzone.over { border-color: #1a73e8; background: #f3f7fe; }
 .dropzone svg { width: 38px; height: 38px; color: #1a73e8; }
+.find-file { margin-top: 14px; padding: 14px 16px 12px; border-radius: 16px; background: #f6f8fb; border: 1px solid #e3e7ee; font-size: 13.5px; color: #3c4043; }
+.ff-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.ff-head b { font-size: 14.5px; font-weight: 600; color: #202124; }
+.ff-os { display: inline-flex; border: 1px solid #dadce0; border-radius: 999px; overflow: hidden; background: #fff; }
+.ff-os button { padding: 4px 11px; font-size: 12.5px; color: #5f6368; border-radius: 0; }
+.ff-os button + button { border-left: 1px solid #dadce0; }
+.ff-os button[aria-selected="true"] { background: #e8f0fe; color: #1a73e8; font-weight: 600; }
+.ff-os button:focus-visible, .ff-copy:focus-visible { outline: 2px solid #1a73e8; outline-offset: 1px; }
+.ff-note { margin: 8px 0 0; color: #b06000; }
+.ff-lede { margin: 10px 0 6px; color: #5f6368; }
+.ff-path { display: flex; align-items: stretch; gap: 8px; }
+.ff-path code { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 10px; background: #fff; border: 1px solid #dadce0; font: 12.5px/1.45 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; color: #202124; overflow-wrap: break-word; user-select: all; }
+.ff-copy { flex: none; padding: 0 14px; border-radius: 10px; background: #1a73e8; color: #fff; font-size: 13px; font-weight: 600; transition: background-color .15s; }
+.ff-copy:hover { background: #1765cc; }
+.ff-copy.done { background: #188038; }
+.ff-steps { margin: 10px 0 0; padding-left: 20px; display: grid; gap: 4px; line-height: 1.55; }
+.ff-steps kbd, .ff-alt kbd { display: inline-block; min-width: 1.6em; margin: 0 1px; padding: 0 5px; border: 1px solid #c6cad0; border-bottom-width: 2px; border-radius: 5px; background: #fff; font: 600 12px/1.6 -apple-system, 'Segoe UI', Pretendard, sans-serif; color: #202124; text-align: center; }
+.ff-alt { margin: 8px 0 0; font-size: 12.5px; color: #80868b; }
+@media (max-width: 520px) { .ff-path { flex-direction: column; } .ff-copy { padding: 9px 14px; } }
 .tour-link { display: flex; align-items: center; gap: 14px; margin-top: 14px; padding: 10px 14px 10px 10px; border: 1px solid #e3e5e8; border-radius: 16px; color: #202124; text-decoration: none; transition: border-color .15s, background-color .15s; }
 .tour-link:hover { border-color: #1a73e8; background: #f3f7fe; }
 .tour-link:focus-visible { outline: 2px solid #1a73e8; outline-offset: 2px; }
