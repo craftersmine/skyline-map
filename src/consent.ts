@@ -64,7 +64,7 @@ function show() {
   if (!document.getElementById('cc-css')) { const st = document.createElement('style'); st.id = 'cc-css'; st.textContent = STYLE; document.head.appendChild(st); }
   el = document.createElement('div');
   el.className = 'cc'; el.setAttribute('role', 'region'); el.setAttribute('aria-label', 'Cookies');
-  el.innerHTML = `<p>${TEXT.msg} <a href="/privacy">${TEXT.more}</a></p><div><button type="button" class="n">${TEXT.no}</button><button type="button" class="y">${TEXT.yes}</button></div>`;
+  el.innerHTML = `<p>${TEXT.msg} <a href="/privacy" target="_blank" rel="noopener">${TEXT.more}</a></p><div><button type="button" class="n">${TEXT.no}</button><button type="button" class="y">${TEXT.yes}</button></div>`;
   el.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest('button');
     if (!b) return;
