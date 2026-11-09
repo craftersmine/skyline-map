@@ -27,7 +27,11 @@ interface Join { node: number; extra: number; part?: Edge; snap?: { e: number; p
 interface Edge {
   id: number; a: number; b: number; len: number; pts: XY[]; cls: string; name: string; speed: number; bike: boolean; brunnel: string;
   /** one-way: +1 traffic a→b, -1 b→a, 0 two-way; `sure` = backed by transit or keep-right evidence */
-  ow: number; sure: boolean;
+  /** one-way direction (+1 start→end, -1 end→start, 0 two-way) and how it is known:
+   *  `sure` — inferred with evidence (transit vehicles or keep-right layout), obeyed as a rule;
+   *  `confirmed` — backed by transit vehicles (seen driving it, or locked to such a segment by junction
+   *  rules): never driven against, even as a last resort. Raw lane values (neither) are only penalised. */
+  ow: number; sure: boolean; confirmed: boolean;
   /** booth id when this segment is a toll GATE (driving through it means paying), else 0 */
   gate: number;
   /** who may use it, from the segment type's lanes (see access.ts) */
@@ -52,8 +56,12 @@ export interface Route {
   mode: Mode; dist: number; time: number; via: string; legs: Leg[];
   /** toll gates driven through, in order */
   tolls?: TollPass[];
-  /** driving: no legal route exists, so this one runs against a one-way the router is confident about */
-  bentOneWay?: boolean;
+  /**
+   * driving: no route obeys every inferred one-way, so this one drives against a direction inferred from
+   * the road layout (keep-right) that no vehicle has confirmed: where, and on which road. Directions
+   * confirmed by transit vehicles are never broken; with no route that respects them there is no route.
+   */
+  againstLikelyOneWay?: { at: XY; road: string }[];
   /** tolls were to be avoided but no toll-free route exists */
   tollsUnavoidable?: boolean;
 }
@@ -121,7 +129,7 @@ export class Router {
         id: seg.id, a: node(seg.sn), b: node(seg.en), len: Math.max(1, len(pts)), pts, cls: c.cls, name: seg.customName,
         speed: (lanes.speed > 0 && lanes.speed < 200 ? lanes.speed : DRIVE_DEFAULT[c.cls] ?? 30) / 3.6,
         bike: lanes.bike || /Bicycle|Bike/i.test(seg.name), brunnel: /Tunnel/i.test(both) ? 'tunnel' : /Elevated|Bridge/i.test(both) ? 'bridge' : '',
-        acc, gate: tolls?.gateOf.get(seg.id) ?? 0, ow: oneway?.dir.get(seg.id) ?? 0, sure: !!oneway && oneway.source.get(seg.id) !== 'prior' && oneway.source.has(seg.id),
+        acc, gate: tolls?.gateOf.get(seg.id) ?? 0, ow: oneway?.dir.get(seg.id) ?? 0, sure: !!oneway && oneway.source.get(seg.id) !== 'prior' && oneway.source.has(seg.id), confirmed: oneway?.source.get(seg.id) === 'transit',
         hA: headRad(pts), hB: headRad([...pts].reverse()),
       };
       const ei = this.edges.push(e) - 1;
@@ -252,7 +260,8 @@ export class Router {
       if (hit.d < max) hits.push({ e: ei, hit, hi: two?.hi, tie: rings ? Math.hypot(hit.pt[0] - p[0], hit.pt[1] - p[1]) : 0 });
     }
     hits.sort((a, b) => a.hit.d - b.hit.d || a.tie - b.tie);
-    if (!hits.length) return this.nearby(p, mode, k * 2, max, fallback);
+    // nothing in reach (open country): the nearest path farther out, joined the same way
+    if (!hits.length) return fallback && max < 3000 ? this.joins(p, mode, k, 3000, fallback) : this.nearby(p, mode, k * 2, max, fallback);
     // Only paths about as near as the nearest one: reaching a farther one means crossing whatever lies
     // between in a straight line, so that extra distance costs double; it must never be cheaper than
     // walking round by the network (the old 64 m shortcut across a block to the next junction).
@@ -394,7 +403,7 @@ export class Router {
         if (found.time >= 0) r.time = this.driveTime(path) + 30;
       }
       r.time += access.time; r.dist += access.dist; // getting from the clicked point to the road and back off it
-      if ('bent' in found && found.bent) r.bentOneWay = true;
+      if ('bent' in found && found.bent) this.flagAgainst(r, path);
       const used = new Set(path.map((p) => p.e));
       const overlap = out.some((o) => { const prev = (o as any)._edges as Set<number>; let sh = 0; for (const e of used) if (prev.has(e)) sh += this.edges[e].len; return sh / r.dist > 0.7; });
       if (!overlap && (!out.length || r.time <= out[0].time * 1.5)) { (r as any)._edges = used; out.push(r); }
@@ -474,7 +483,25 @@ export class Router {
   // ------------------------------------------------------------ driving
   /** May a car drive this edge in this direction? Confident one-way rules are hard. */
   private relaxed = false; // last resort: confident one-ways become heavy penalties instead of bans
-  private driveOk(e: Edge, fwd: boolean) { return this.allowed(e, 'drive') && (this.relaxed || !(e.ow !== 0 && e.sure && (fwd ? 1 : -1) !== e.ow)); }
+  /** Mark a last-resort route: where it drives against a likely one-way, with a warning step there. */
+  private flagAgainst(r: Route, path: { e: number; fwd: boolean }[]) {
+    const spots: { at: XY; road: string }[] = [];
+    for (const { e: ei, fwd } of path) {
+      const e = this.edges[ei];
+      if (e.ow !== 0 && e.sure && (fwd ? 1 : -1) !== e.ow && !spots.some((x) => x.road === e.name && e.name)) spots.push({ at: toLngLat(...(fwd ? e.pts[0] : e.pts[e.pts.length - 1])), road: e.name });
+    }
+    if (!spots.length) return;
+    r.againstLikelyOneWay = spots;
+    const steps = r.legs[0].steps;
+    for (const sp of [...spots].reverse()) {
+      // after the step nearest to where it begins
+      let k = 0, bd = Infinity;
+      steps.forEach((st, i) => { const d = Math.hypot(st.at[0] - sp.at[0], st.at[1] - sp.at[1]); if (d < bd && st.maneuver !== 'arrive') { bd = d; k = i; } });
+      steps.splice(k + 1, 0, { text: sp.road ? t('Drives against the likely one-way direction of {road} (not confirmed)', { road: sp.road }) : t('Drives against the likely one-way direction of this road (not confirmed)'), dist: 0, time: 0, at: sp.at, maneuver: 'warn' });
+    }
+  }
+  /** Inferred one-ways are rules; the last-resort search may break a likely (keep-right) one, never a confirmed one. */
+  private driveOk(e: Edge, fwd: boolean) { return this.allowed(e, 'drive') && !(e.ow !== 0 && e.sure && (fwd ? 1 : -1) !== e.ow && (!this.relaxed || e.confirmed)); }
   /** Time on the edge; against a likely-but-unproven one-way it is heavily penalised, never banned. */
   /** The fixed parts of driveCost (wrong-way penalty, 'Avoid tolls' gate hour): paid in full on any stretch of the edge. */
   private wrongWayFixed(e: Edge, fwd: boolean) { return (e.ow !== 0 && (fwd ? 1 : -1) !== e.ow ? (e.sure ? 600 : 90) : 0) + (this.avoidTolls && e.gate ? 3600 : 0); }
@@ -529,7 +556,8 @@ export class Router {
     if (!SH.length || !TH.length) return null;
     const r = this.driveSearchOn(SH, TH, penalty);
     if (r) return r;
-    // no legal route: bend confident one-ways (heavily penalised, so as little as possible)
+    // no route obeys every inferred one-way: as a last resort a likely (keep-right) direction may be driven
+    // against, heavily penalised and flagged; a direction confirmed by vehicles never is (then: no route)
     this.relaxed = true;
     try { const b = this.driveSearchOn(SH, TH, penalty); return b ? { ...b, bent: true } : null; } finally { this.relaxed = false; }
   }
@@ -541,6 +569,15 @@ export class Router {
    * other road is in reach.
    */
   private driveHits(p: XY, k = 4, max = 450): DriveHit[] {
+    // nothing drivable in reach (a point in open country): the nearest road farther out, still a road
+    // rather than a single junction that may sit on a motorway carriageway
+    // order of preference: an ordinary road in reach; one farther out; only then a motorway/highway
+    const near = this.driveHitsWithin(p, k, max, false);
+    if (near.length) return near;
+    const far = this.driveHitsWithin(p, k, 3000, false);
+    return far.length ? far : this.driveHitsWithin(p, k, max, true);
+  }
+  private driveHitsWithin(p: XY, k: number, max: number, highways: boolean): DriveHit[] {
     const { id, size } = this.comp('drive');
     const big = Math.min(40, Math.max(...size, 0));
     const rings = this.ends.get(p[0] + ',' + p[1]);
@@ -554,8 +591,7 @@ export class Router {
       if (hit.d < max) hits.push({ e: ei, ...hit, frac: e.len > 0 ? Math.min(1, hit.along / e.len) : 0, extra: 0 });
     }
     hits.sort((a, b) => a.d - b.d);
-    const local = hits.filter((h) => !HIGHWAY.has(this.edges[h.e].cls));
-    if (local.length) hits.splice(0, hits.length, ...local);
+    if (!highways) hits.splice(0, hits.length, ...hits.filter((h) => !HIGHWAY.has(this.edges[h.e].cls)));
     if (!hits.length) return [];
     const d0 = hits[0].d, slack = rings ? 60 : 30, over = rings ? 1 : 2;
     return hits.filter((h) => h.d <= d0 + slack).slice(0, rings ? 12 : k).map((h) => ({ ...h, extra: (over * (h.d - d0)) / 3 }));
@@ -655,7 +691,18 @@ export class Router {
     // inside an asset many nodes sit right at its edge: keep plenty, so every side is an option
     if (this.ends.has(p[0] + ',' + p[1])) { k = Math.max(k, 40); for (const x of c) x.d += Math.hypot(this.pos[x.node][0] - p[0], this.pos[x.node][1] - p[1]) * 1e-6; }
     c.sort((a, b) => a.d - b.d);
-    if (!c.length) { if (!fallback) return []; const n = this.nearest(p, mode, 3000); return n < 0 ? [] : [{ node: n, extra: 0 }]; }
+    if (!c.length) {
+      if (!fallback) return [];
+      // nothing within reach: the few nearest junctions within 3 km, not just one (a lone junction may be
+      // on a motorway carriageway that can't be reached legally from here)
+      for (let i = 0; i < this.pos.length; i++) {
+        if (id[i] < 0 || size[id[i]] < big) continue;
+        const d = this.reach(p, this.pos[i]);
+        if (d < 3000) c.push({ node: i, d });
+      }
+      c.sort((a, b) => a.d - b.d);
+      if (!c.length) return [];
+    }
     const d0 = c[0].d, speed = mode === 'drive' ? 3 : WALK; // reaching a farther road: drive-up ~3 m/s, else on foot
     return c.slice(0, k).map((x) => ({ node: x.node, extra: (x.d - d0) / speed }));
   }

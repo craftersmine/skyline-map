@@ -72,9 +72,33 @@ for (const f of files) {
   const stops = new Map<string, XY>();
   for (const tr of city.transports) for (const sid of tr.stops) { const n = city.nodes.get(sid); if (n) stops.set(`${n.x.toFixed(1)},${n.z.toFixed(1)}`, [n.x, n.z]); }
   const isStop = (p: XY) => stops.has(`${p[0].toFixed(1)},${p[1].toFixed(1)}`) || [...stops.values()].some((s) => Math.hypot(s[0] - p[0], s[1] - p[1]) < 0.3);
+  // one-way policy, edge by edge: even the last-resort search never permits driving against a direction
+  // confirmed by vehicles, and does permit (only then) going against a likely keep-right one
+  {
+    let leak = 0, likely = 0;
+    R.relaxed = true;
+    for (const e of R.edges as any[]) {
+      if (!e.ow || !e.acc.drive) continue;
+      const wrong = R.driveOk(e, e.ow !== 1);
+      if (e.confirmed && wrong) leak++;
+      if (e.sure && !e.confirmed && wrong) likely++;
+    }
+    R.relaxed = false;
+    const strictLeak = (R.edges as any[]).filter((e) => e.ow && e.sure && e.acc.drive && R.driveOk(e, e.ow !== 1)).length;
+    if (leak || strictLeak) fail(`one-way policy leak: ${leak} confirmed (last resort), ${strictLeak} inferred (normal search) directions drivable the wrong way`);
+    // a flagged route says where: a marker and a warning step at the first likely one-way it breaks
+    const kr = (R.edges as any[]).findIndex((e) => e.ow && e.sure && !e.confirmed && e.acc.drive && e.pts.length >= 2);
+    if (kr >= 0) {
+      const e = R.edges[kr], path = [{ e: kr, fwd: e.ow !== 1 }];
+      const route: any = R.partsRoute([{ ed: e, pts: e.ow !== 1 ? e.pts : [...e.pts].reverse() }], 'drive', e.pts[0], e.pts[e.pts.length - 1]);
+      R.flagAgainst(route, path);
+      if (!route.againstLikelyOneWay?.length || !route.legs[0].steps.some((st: any) => st.maneuver === 'warn')) fail('a route against a likely one-way is not flagged with a warning step');
+    }
+    console.log(`  one-way policy: ${likely} likely (keep-right) directions may be bent as a flagged last resort; confirmed ones never`);
+  }
   // random trips between road nodes
   const nodes = [...city.nodes.values()].filter((n) => n.srv === 'Road');
-  let routes = 0, interior = 0, interiorLen = 0, worstInterior = 0, longAccess = 0, against = 0, bent = 0;
+  let routes = 0, interior = 0, interiorLen = 0, worstInterior = 0, longAccess = 0, against = 0, againstConfirmed = 0, bent = 0;
   const notes: string[] = [];
   for (let t = 0; t < N; t++) {
     const a = nodes[Math.floor(rnd() * nodes.length)], dx = (rnd() - 0.5) * 2400, dz = (rnd() - 0.5) * 2400;
@@ -84,17 +108,20 @@ for (const f of files) {
       if (!r) continue;
       routes++;
       const walks = r.legs.filter((l) => l.kind === 'walk' || l.kind === 'drive');
-      // driving never runs against a one-way direction the router is sure of (its hard rule)
-      if (mode === 'drive' && r.bentOneWay) bent++;
-      if (mode === 'drive' && !r.bentOneWay) for (const l of r.legs) {
+      // one-way rules: a direction confirmed by vehicles is never driven against; an ordinary route never
+      // breaks a likely (keep-right) one either; a last-resort route that does must say so
+      const flagged = !!r.againstLikelyOneWay?.length;
+      if (mode === 'drive' && flagged) bent++;
+      if (mode === 'drive') for (const l of r.legs) {
         const pts = l.coords.map(([lng, lat]) => fromLngLat(lng, lat));
         for (let i = 1; i < pts.length; i++) {
           if (Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]) < 1) continue;
           const on = pieceOf(pts[i - 1], pts[i]);
           if (!on.length) continue;
           // shared geometry (a road with parallel pieces) is fine if any carrier allows this direction
-          const ok = on.some(({ seg, along }) => { const dir = ow.dir.get(seg) ?? 0, sure = ow.source.has(seg) && ow.source.get(seg) !== 'prior'; return !dir || !sure || (dir === 1) === along; });
-          if (!ok) { against++; if (notes.length < 8) notes.push(`drive against one-way seg ${on[0].seg} at (${pts[i - 1].map((v) => v.toFixed(0))})`); }
+          const allows = (strict: boolean) => on.some(({ seg, along }) => { const dir = ow.dir.get(seg) ?? 0, src = ow.source.get(seg); const rule = strict ? src === 'transit' || src === 'keepright' : src === 'transit'; return !dir || !rule || (dir === 1) === along; });
+          if (!allows(false)) { againstConfirmed++; if (notes.length < 8) notes.push(`drive against a CONFIRMED one-way seg ${on[0].seg} at (${pts[i - 1].map((v) => v.toFixed(0))})`); }
+          else if (!flagged && !allows(true)) { against++; if (notes.length < 8) notes.push(`unflagged drive against a likely one-way seg ${on[0].seg} at (${pts[i - 1].map((v) => v.toFixed(0))})`); }
         }
       }
       walks.forEach((l, wi) => {
@@ -105,7 +132,7 @@ for (const f of files) {
           const atStart = i === 1 && wi === 0 && l === r.legs[0], atEnd = i === pts.length - 1 && l === r.legs[r.legs.length - 1];
           const atStop = isStop(p) || isStop(q);
           if (atStart || atEnd || atStop) {
-            if (r.bentOneWay) continue; // last-resort routes (no legal way) may start at any junction
+            if (flagged) continue; // last-resort routes may start at any junction
             // an access link: no longer than the way to the nearest path, plus slack for picking a side
             const end = atStart ? p : atEnd ? q : isStop(p) ? p : q;
             const near = toPath(end, mode === 'drive' ? 'drive' : 'walk');
@@ -120,11 +147,12 @@ for (const f of files) {
       });
     }
   }
-  console.log(`\n${name}: ${routes} routes; mid-route pieces off the network: ${interior} (${interiorLen.toFixed(0)} m, worst ${worstInterior.toFixed(1)} m); access links longer than needed: ${longAccess}; driving against a sure one-way: ${against} (+${bent} routes with no legal way, bending one)`);
+  console.log(`\n${name}: ${routes} routes; mid-route pieces off the network: ${interior} (${interiorLen.toFixed(0)} m, worst ${worstInterior.toFixed(1)} m); access links longer than needed: ${longAccess}; against a confirmed one-way: ${againstConfirmed}; unflagged against a likely one: ${against}; flagged last-resort routes: ${bent}`);
   for (const n of notes) console.log('    ' + n);
   if (interior) fail(`${interior} walking pieces cut across instead of following a segment`);
   if (longAccess) fail(`${longAccess} access links reach past a nearer path`);
-  if (against) fail(`${against} driving pieces run against a confident one-way`);
+  if (againstConfirmed) fail(`${againstConfirmed} driving pieces run against a one-way confirmed by vehicles`);
+  if (against) fail(`${against} driving pieces run against a likely one-way without saying so`);
 }
 if (failures) { console.error(`\n${failures} check(s) failed`); process.exit(1); }
 console.log('\nall route geometry checks passed');

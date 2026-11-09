@@ -30,6 +30,7 @@ function maneuverIcon(m: string): string {
   if (m === 'depart') return svg('<circle cx="12" cy="12" r="5" fill="none" stroke-width="2.4"/>', 'man');
   if (m === 'arrive') return svg('<path d="M12 2a7 7 0 0 0-7 7c0 5.3 7 13 7 13s7-7.7 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" stroke="none" fill="#ea4335"/>', 'man');
   if (m === 'uturn') return svg('<path d="M9 21V9a4 4 0 0 1 8 0v4"/><path d="m13.5 10.5 3.5 3.5 3.5-3.5"/>', 'man');
+  if (m === 'warn') return svg('<path d="M12 3 2 21h20L12 3z" fill="#e37400" stroke="none"/><path d="M12 10v5M12 17.5v.5" stroke="#fff" stroke-width="2.2"/>', 'man');
   if (m === 'toll') return svg('<rect x="4" y="8" width="6" height="12" rx="1" fill="#d9822b" stroke="none"/><path d="M10 12h10" stroke="#d9822b"/>', 'man');
   if (m === 'merge') return svg('<path d="M12 21V11L7 4"/><path d="M12 11l5-7"/>', 'man');
   const deg = /slight-left|ramp-left|exit-left/.test(m) ? -45 : /slight-right|ramp-right|exit-right/.test(m) ? 45 : m === 'turn-left' ? -90 : m === 'turn-right' ? 90 : 0;
@@ -208,7 +209,7 @@ export function createDirections(d: DirectionsDeps) {
     const rs = st.results[st.mode];
     if (rs === undefined) { body.innerHTML = '<div class="dir-loading"><span></span></div>'; return; }
     if (!rs.length) {
-      const why = st.mode === 'transit' ? t('No transit route — it may be quicker to walk, or no line serves these places.') : st.mode === 'walk' || st.mode === 'bike' ? t('No route for this mode. The places may only be connected by highways or water.') : t('No driving route between these places.');
+      const why = st.mode === 'transit' ? t('No transit route — it may be quicker to walk, or no line serves these places.') : st.mode === 'walk' || st.mode === 'bike' ? t('No route for this mode. The places may only be connected by highways or water.') : t('No legal driving route between these places. One-way roads confirmed by traffic are never driven the wrong way.');
       body.innerHTML = `<div class="dir-empty">${esc(why)}</div>`; return;
     }
     const sel = rs[st.sel];
@@ -224,7 +225,8 @@ export function createDirections(d: DirectionsDeps) {
     const sub = r.mode === 'transit'
       ? `${transfers > 0 ? tn(transfers, '{n} transfer', '{n} transfers') + ' · ' : ''}${t('{dist} walk', { dist: fmtDist(r.legs.filter((l) => l.kind === 'walk').reduce((a, l) => a + l.dist, 0)) })} · ${t('incl. ~{time} est. wait', { time: fmtTime(r.legs.reduce((a, l) => a + (l.wait ?? 0), 0)) })}`
       : (r.via ? esc(t('via {road}', { road: r.via })) : i === 0 ? t('Fastest route') : t('Alternative route'))
-        + (r.tolls?.length ? `<div class="toll-note${r.tollsUnavoidable ? ' warn' : ''}">${r.tollsUnavoidable ? t('Tolls can’t be avoided on this trip') : t('This route has tolls')} · ${tollSummary(P.tollCost(r)!)}</div>` : '');
+        + (r.tolls?.length ? `<div class="toll-note${r.tollsUnavoidable ? ' warn' : ''}">${r.tollsUnavoidable ? t('Tolls can’t be avoided on this trip') : t('This route has tolls')} · ${tollSummary(P.tollCost(r)!)}</div>` : '')
+        + onewayNote(r);
     return `<div class="dir-card${on ? ' on' : ''}" data-idx="${i}">
       <div class="dc-icon">${svg(icon)}</div>
       <div class="dc-main">${chips}<div class="dc-sub">${sub}</div>${on && !st.expanded ? `<button class="dc-details" data-details>${t('Details')}</button>` : ''}</div>
@@ -233,7 +235,7 @@ export function createDirections(d: DirectionsDeps) {
   }
 
   function details(r: Route): string {
-    const head = `<div class="dd-head"><button class="icon-btn" data-back aria-label="${t('Back')}">${svg('<path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/>')}</button><div><b>${fmtTime(r.time)}</b> <span class="muted">(${fmtDist(r.dist)})</span>${r.via ? `<div class="muted small">${esc(t('via {road}', { road: r.via }))}</div>` : ''}${r.tolls?.length ? tollDetails(r) : ''}</div></div>`;
+    const head = `<div class="dd-head"><button class="icon-btn" data-back aria-label="${t('Back')}">${svg('<path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/>')}</button><div><b>${fmtTime(r.time)}</b> <span class="muted">(${fmtDist(r.dist)})</span>${r.via ? `<div class="muted small">${esc(t('via {road}', { road: r.via }))}</div>` : ''}${r.tolls?.length ? tollDetails(r) : ''}${onewayNote(r, true)}</div></div>`;
     if (r.mode !== 'transit') return head + `<ol class="steps">${r.legs[0].steps.map(stepRow).join('')}</ol>`;
     const rows: string[] = [`<li class="tr-place"><i class="dot o"></i><b>${esc(st.from!.label)}</b></li>`];
     r.legs.forEach((l, i) => {
@@ -257,6 +259,12 @@ export function createDirections(d: DirectionsDeps) {
     return head + `<ol class="transit-steps">${rows.join('')}</ol>${fareBox(P.fareCost(r))}<div class="dd-schem"><button class="pill" data-schem>${svg('<path d="M4 6h5v2H6v3h3v2H6v3h3v2H4V6zm11 0h5v12h-5v-2h3v-3h-3v-2h3V8h-3V6zM10 11h4v2h-4z"/>')}${t('Show on transit map')}</button></div><p class="muted small dd-note">${t('Ride times come from the real road and track speed limits, with acceleration, stops and traffic. Waiting times are estimates: the export has no timetable.')}</p>`;
   }
 
+  /** A last-resort route that drives against a likely (unconfirmed) one-way: never shown as an ordinary route. */
+  function onewayNote(r: Route, long = false): string {
+    const n = r.againstLikelyOneWay?.length;
+    if (!n) return '';
+    return `<div class="toll-note warn oneway-note">${t('No route obeys every one-way here: this one drives against a likely one-way direction')}${long ? `<div class="small">${t('That direction was inferred from the road layout and no vehicle has confirmed it, so it may be wrong. Check before driving.')}</div>` : ''}</div>`;
+  }
   function tollDetails(r: Route): string {
     const tc = P.tollCost(r)!;
     return `<div class="toll-note${r.tollsUnavoidable ? ' warn' : ''}">${r.tollsUnavoidable ? t('Tolls can’t be avoided') : t('Has tolls')} · ${tn(tc.fees.length, '{n} booth', '{n} booths')} · ${tollSummary(tc)}</div>

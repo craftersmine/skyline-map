@@ -60,7 +60,7 @@ for (const f of files) {
         // prove it: with every gate banned outright there must be no route at all
         const saved = r.edges.filter((e: any) => e.gate).map((e: any) => [e, e.acc] as const);
         for (const [e] of saved) e.acc = { ...e.acc, drive: false };
-        // the router's own search from the same joins; legal routes only (not its last resort that bends one-ways)
+        // the router's own search from the same joins; legal routes only (not its flagged last resort)
         const banned = r.driveRoute(a, b, new Map());
         for (const [e, acc] of saved) e.acc = acc;
         if (banned && !banned.bent) fakeUnavoidable++;
