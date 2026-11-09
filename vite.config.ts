@@ -38,8 +38,38 @@ function localMaps(): Plugin {
   };
 }
 
+/**
+ * Showcase screenshots: `<img data-shot="d-street" data-sizes="...">` becomes a responsive WebP image
+ * (src, srcset, sizes, width, height, lazy loading) from public/showcase/manifest.json, at build and dev time,
+ * so the page is plain static markup.
+ */
+function showcaseShots(): Plugin {
+  const manifestPath = path.resolve(__dirname, 'public/showcase/manifest.json');
+  return {
+    name: 'showcase-shots',
+    transformIndexHtml(html, ctx) {
+      if (!ctx.filename.endsWith('showcase.html')) return html;
+      const m: Record<string, { w: number; h: number; widths: number[] }> = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      return html.replace(/<img([^>]*?)\sdata-shot="([^"]+)"([^>]*)>/g, (_all, pre: string, name: string, post: string) => {
+        const s = m[name];
+        if (!s) throw new Error(`showcase: no screenshot "${name}"`);
+        const attrs = pre + post;
+        const sizes = /data-sizes="([^"]+)"/.exec(attrs)?.[1] ?? '100vw';
+        const eager = /\sdata-eager/.test(attrs);
+        const rest = attrs.replace(/\sdata-sizes="[^"]*"/, '').replace(/\sdata-eager/, '');
+        const src = (w: number) => `/showcase/${name}-${w}.webp`;
+        const mid = s.widths[Math.min(1, s.widths.length - 1)];
+        return `<img${rest} src="${src(mid)}" srcset="${s.widths.map((w) => `${src(w)} ${w}w`).join(', ')}" sizes="${sizes}" width="${s.w}" height="${s.h}" data-full="${src(s.widths[s.widths.length - 1])}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async">`;
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [localMaps()],
+  plugins: [localMaps(), showcaseShots()],
   worker: { format: 'es' },
-  build: { target: 'es2022', chunkSizeWarningLimit: 2000 },
+  build: {
+    target: 'es2022', chunkSizeWarningLimit: 2000,
+    rollupOptions: { input: { main: path.resolve(__dirname, 'index.html'), showcase: path.resolve(__dirname, 'showcase.html') } },
+  },
 });

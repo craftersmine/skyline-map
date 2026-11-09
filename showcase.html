@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Skyline Atlas · A real map of your Cities: Skylines city</title>
+  <meta name="description" content="Skyline Atlas turns Cities: Skylines CSLMapView exports into detailed, interactive maps with real directions, transit planning, schematic transit maps, tolls and fares." />
+  <meta property="og:title" content="Skyline Atlas" />
+  <meta property="og:description" content="Your Cities: Skylines city, as a real map with directions and transit." />
+  <meta property="og:image" content="/showcase/d-hero-1600.webp" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%231a73e8' d='M16 2C10.5 2 6 6.4 6 11.9 6 19.3 16 30 16 30s10-10.7 10-18.1C26 6.4 21.5 2 16 2z'/%3E%3Ccircle cx='16' cy='12' r='4' fill='white'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="preload" as="image" href="/showcase/d-hero-1600.webp" imagesrcset="/showcase/d-hero-960.webp 960w, /showcase/d-hero-1600.webp 1600w, /showcase/d-hero-2400.webp 2400w" imagesizes="(min-width: 64rem) 58vw, 100vw" fetchpriority="high" />
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="top">
+    <div class="top-in">
+      <a class="mark" href="/showcase.html" aria-label="Skyline Atlas showcase, top"><span class="mark-pin" aria-hidden="true"></span>Skyline Atlas</a>
+      <nav class="line" aria-label="Sections">
+        <ol>
+          <li style="--c: #0033b7"><a href="#map">Map</a></li>
+          <li style="--c: #0033b7"><a href="#depth">3D</a></li>
+          <li style="--c: #0033b7"><a href="#terrain">Terrain</a></li>
+          <li style="--c: #00b800"><a href="#directions">Directions</a></li>
+          <li style="--c: #00b800"><a href="#tolls">Tolls</a></li>
+          <li style="--c: #cc0000"><a href="#transit">Transit</a></li>
+          <li style="--c: #cc0000"><a href="#diagram">Diagram</a></li>
+          <li style="--c: #b74c00"><a href="#prices">Prices</a></li>
+          <li style="--c: #b74c00"><a href="#explore">Explore</a></li>
+          <li style="--c: #00a6da"><a href="#mobile">Mobile</a></li>
+          <li style="--c: #00a6da"><a href="#languages">Languages</a></li>
+        </ol>
+      </nav>
+      <a class="btn btn-primary btn-sm" href="/">Open your export</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- hero -->
+    <section class="hero container">
+      <div class="hero-text">
+        <h1>Your city, mapped for real.</h1>
+        <p class="lead">Skyline Atlas turns Cities: Skylines exports into detailed, interactive maps with real directions and transit planning.</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="/">Open your export</a>
+          <a class="btn" href="#map">Take the tour</a>
+        </div>
+        <p class="fine">Free, in your browser. Your file never leaves your computer.</p>
+      </div>
+      <figure class="hero-visual frame zoomable">
+        <img data-shot="d-hero" data-eager data-sizes="(min-width: 64rem) 58vw, 100vw" alt="Skyline Atlas showing the city of Sarrant: rivers, districts, metro and rail lines with named stations" />
+        <div class="plate" aria-label="What this export holds">
+          <div class="plate-head">Sarrant</div>
+          <dl>
+            <div><dt>Buildings</dt><dd>6,248</dd></div>
+            <div><dt>Transit lines</dt><dd>36</dd></div>
+            <div><dt>Stations</dt><dd>57</dd></div>
+            <div><dt>Highest point</dt><dd>1024 m</dd></div>
+          </dl>
+        </div>
+        <figcaption>One CSLMapView export, opened in Skyline Atlas.</figcaption>
+      </figure>
+    </section>
+
+    <!-- map -->
+    <section class="sec container" id="map" aria-labelledby="map-h">
+      <div class="sec-head">
+        <h2 id="map-h">Drawn like a real atlas.</h2>
+        <p class="lead">Roads at their true width, every lot and building, rivers, forests and hillshade, all traced from your export.</p>
+      </div>
+      <figure class="compare frame" data-compare>
+        <img data-shot="d-hero" data-sizes="(min-width: 90rem) 1312px, 100vw" alt="Sarrant in the Default map style" />
+        <div class="compare-top" aria-hidden="true"><img data-shot="d-hero-night" data-sizes="(min-width: 90rem) 1312px, 100vw" alt="" /></div>
+        <span class="compare-tag compare-tag-l" aria-hidden="true">Night</span>
+        <span class="compare-tag compare-tag-r" aria-hidden="true">Default</span>
+        <div class="compare-rule" aria-hidden="true"><span></span></div>
+        <label class="visually-hidden" for="compareRange">Reveal the Night style</label>
+        <input id="compareRange" class="compare-range" type="range" min="0" max="100" value="50" />
+        <figcaption>Drag to compare the Default and Night styles of the same view.</figcaption>
+      </figure>
+      <div class="grid-3">
+        <figure class="frame zoomable span-2">
+          <img data-shot="d-street" data-sizes="(min-width: 64rem) 66vw, 100vw" alt="Street-level view with buildings, lots, a roundabout with one-way arrows and named landmarks" />
+          <figcaption>Street level: lots, buildings, landmarks and one-way arrows.</figcaption>
+        </figure>
+        <div class="stack">
+          <figure class="frame zoomable">
+            <img data-shot="d-bus-routes" data-sizes="(min-width: 64rem) 32vw, 100vw" alt="Bus routes drawn as an overlay across the city centre" />
+            <figcaption>Bus routes as an overlay.</figcaption>
+          </figure>
+          <figure class="frame zoomable">
+            <img data-shot="d-city" data-sizes="(min-width: 64rem) 32vw, 100vw" alt="The whole region: mountains, rivers and every transit line" />
+            <figcaption>The whole region at once.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3D -->
+    <section class="sec container" id="depth" aria-labelledby="depth-h">
+      <div class="sec-head">
+        <h2 id="depth-h">Tilt it. Walk the skyline.</h2>
+        <p class="lead">Buildings rise in 3D when the camera tilts, with heights estimated from each zone and level.</p>
+      </div>
+      <figure class="frame zoomable wide">
+        <img data-shot="d-3d-buildings" data-sizes="(min-width: 90rem) 1312px, 100vw" alt="Tilted 3D view of the city centre with extruded buildings, metro lines and the river" />
+        <figcaption>The centre of Sarrant, tilted with 3D buildings on.</figcaption>
+      </figure>
+    </section>
+
+    <!-- terrain -->
+    <section class="sec container" id="terrain" aria-labelledby="terrain-h">
+      <div class="sec-head">
+        <h2 id="terrain-h">The ground under it.</h2>
+        <p class="lead">Elevation, contours and true relief come from the game's own heightmap.</p>
+      </div>
+      <div class="tabs" data-tabs>
+        <div class="tablist" role="tablist" aria-label="Terrain views">
+          <button role="tab" id="t-terrain" aria-controls="p-terrain" aria-selected="true">Terrain</button>
+          <button role="tab" id="t-relief" aria-controls="p-relief" aria-selected="false" tabindex="-1">3D terrain</button>
+          <button role="tab" id="t-measure" aria-controls="p-measure" aria-selected="false" tabindex="-1">Measure</button>
+        </div>
+        <figure class="frame zoomable" role="tabpanel" id="p-terrain" aria-labelledby="t-terrain">
+          <img data-shot="d-terrain" data-sizes="(min-width: 90rem) 1312px, 100vw" alt="Terrain style with contour lines over Mount Kieran National Park" />
+          <figcaption>Terrain style with contour lines, over Mount Kieran National Park.</figcaption>
+        </figure>
+        <figure class="frame zoomable" role="tabpanel" id="p-relief" aria-labelledby="t-relief" hidden>
+          <img data-shot="d-terrain-3d" data-sizes="(min-width: 90rem) 1312px, 100vw" alt="3D terrain: mountains in relief with the city and rivers beyond" />
+          <figcaption>3D terrain, looking across the mountains to the city.</figcaption>
+        </figure>
+        <figure class="frame zoomable" role="tabpanel" id="p-measure" aria-labelledby="t-measure" hidden>
+          <img data-shot="d-measure" data-sizes="(min-width: 90rem) 1312px, 100vw" alt="Measuring an area over mountains: distance, area and elevation range" />
+          <figcaption>Measure distance, area and climb, like Google Earth.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- night -->
+    <section class="band band-ink" aria-labelledby="night-h">
+      <div class="container sec">
+        <div class="sec-head">
+          <h2 id="night-h">After dark.</h2>
+          <p class="lead">A Night style for late planning sessions, down to the transit lines and the 3D buildings.</p>
+        </div>
+        <div class="grid-2">
+          <figure class="frame frame-ink zoomable">
+            <img data-shot="d-3d-night" data-sizes="(min-width: 64rem) 50vw, 100vw" alt="The city centre at night in 3D" />
+            <figcaption>The centre in 3D, Night style.</figcaption>
+          </figure>
+          <figure class="frame frame-ink zoomable">
+            <img data-shot="d-city-night" data-sizes="(min-width: 64rem) 50vw, 100vw" alt="The whole region in the Night style" />
+            <figcaption>The region, Night style.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- directions -->
+    <section class="sec container" id="directions" aria-labelledby="dir-h">
+      <div class="sec-head">
+        <h2 id="dir-h">Directions that know the roads.</h2>
+        <p class="lead">Routes run on your city's real network, with alternatives and turn-by-turn steps.</p>
+      </div>
+      <div class="tabs" data-tabs>
+        <div class="tablist" role="tablist" aria-label="Travel modes">
+          <button role="tab" id="t-drive" aria-controls="p-drive" aria-selected="true">Drive</button>
+          <button role="tab" id="t-transit" aria-controls="p-transit" aria-selected="false" tabindex="-1">Transit</button>
+          <button role="tab" id="t-walk" aria-controls="p-walk" aria-selected="false" tabindex="-1">Walk</button>
+          <button role="tab" id="t-bike" aria-controls="p-bike" aria-selected="false" tabindex="-1">Cycle</button>
+        </div>
+        <figure class="frame zoomable" role="tabpanel" id="p-drive" aria-labelledby="t-drive">
+          <img data-shot="d-drive" data-sizes="(min-width: 90rem) 1312px, 100vw" alt="Driving directions from the airport to Sarrant Central with three alternatives and their tolls" />
+          <figcaption>Driving obeys one-way streets and charges time for turns and crossroads.</figcaption>
+        </figure>
+        <figure class="frame zoomable" role="tabpanel" id="p-transit" aria-labelledby="t-transit" hidden>
+          <img data-shot="d-transit" data-sizes="(min-width: 90rem) 1312px, 100vw" alt="Transit directions with two options, line pills, walking time and fares" />
+          <figcaption>Transit options using your own line and station names.</figcaption>
+        </figure>
+        <figure class="frame zoomable" role="tabpanel" id="p-walk" aria-labelledby="t-walk" hidden>
+          <img data-shot="d-walk" data-sizes="(min-width: 90rem) 1312px, 100vw" alt="Walking directions along the embankment, drawn as a dotted line on the streets" />
+          <figcaption>Walking follows the real paths and pavements.</figcaption>
+        </figure>
+        <figure class="frame zoomable" role="tabpanel" id="p-bike" aria-labelledby="t-bike" hidden>
+          <img data-shot="d-bike" data-sizes="(min-width: 90rem) 1312px, 100vw" alt="Cycling directions with the cycling overlay showing bike lanes" />
+          <figcaption>Cycling prefers bike lanes, shown with the Cycling overlay.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- tolls -->
+    <section class="band band-paper" id="tolls" aria-labelledby="tolls-h">
+      <div class="container sec">
+        <div class="sec-head">
+          <h2 id="tolls-h">Tolls, found and priced.</h2>
+          <p class="lead">Booths are detected from the road network. Every route says which gates it passes and what they cost, and you can avoid them.</p>
+        </div>
+        <div class="panels">
+          <figure class="panel zoomable">
+            <img data-shot="e-drive" data-sizes="(min-width: 64rem) 400px, 90vw" alt="Three driving routes, each marked with its toll total" />
+            <figcaption>Routes with their toll totals.</figcaption>
+          </figure>
+          <figure class="panel zoomable">
+            <img data-shot="e-drive-steps" data-sizes="(min-width: 64rem) 400px, 90vw" alt="Turn-by-turn steps including where each toll is paid and its fee" />
+            <figcaption>The step where each toll is paid.</figcaption>
+          </figure>
+          <figure class="panel zoomable">
+            <img data-shot="e-toll" data-sizes="(min-width: 64rem) 400px, 90vw" alt="A toll booth's panel: the road it sits on, its type and its fee" />
+            <figcaption>Each booth, with its own fee.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- transit -->
+    <section class="sec container" id="transit" aria-labelledby="transit-h">
+      <div class="sec-head">
+        <h2 id="transit-h">Every line, timed from the tracks.</h2>
+        <p class="lead">Ride times come from real speed limits, stops and dwell times. Fares follow the rules you set.</p>
+      </div>
+      <div class="board-wrap">
+        <table class="board">
+          <caption>Rail, metro and ferry lines in the Sarrant export</caption>
+          <thead><tr><th scope="col">Line</th><th scope="col">Between</th><th scope="col" class="num">Stations</th></tr></thead>
+          <tbody>
+            <tr><th scope="row"><i style="--c:#0033b7"></i>Metro Line 2</th><td>Severin Harbour to Sarrant Tech West</td><td class="num">14</td></tr>
+            <tr><th scope="row"><i style="--c:#00a6da"></i>Sarrant Line</th><td>Onsdale to Sarrant Station</td><td class="num">7</td></tr>
+            <tr><th scope="row"><i style="--c:#cc0000"></i>STX-A</th><td>Chatford to North Sarrant</td><td class="num">7</td></tr>
+            <tr><th scope="row"><i style="--c:#00b800"></i>Metro Line 1</th><td>Sports Park to Norisa</td><td class="num">6</td></tr>
+            <tr><th scope="row"><i style="--c:#b74c00"></i>Hassel Line</th><td>Sarrant Circuit to Selbourne Central</td><td class="num">6</td></tr>
+            <tr><th scope="row"><i style="--c:#fff400"></i>Yellow Line</th><td>Stadium to Norisa</td><td class="num">6</td></tr>
+            <tr><th scope="row"><i style="--c:#7c7c7c"></i>Lakeshore Line</th><td>Jannheim to Sarrant Station</td><td class="num">5</td></tr>
+            <tr><th scope="row"><i class="dash" style="--c:#2c81be"></i>Ferry Line 1</th><td>Tregarron Pier loop</td><td class="num">5</td></tr>
+            <tr><th scope="row"><i class="dash" style="--c:#cab95c"></i>Ferry Line 2</th><td>Sarrant Quay to Severin Pier</td><td class="num">5</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pair">
+        <figure class="panel zoomable">
+          <img data-shot="e-transit" data-sizes="(min-width: 64rem) 420px, 90vw" alt="Two transit options with line pills, transfers, walking and fares" />
+          <figcaption>Options with transfers, walking and fares.</figcaption>
+        </figure>
+        <figure class="panel zoomable">
+          <img data-shot="e-transit-steps" data-sizes="(min-width: 64rem) 420px, 90vw" alt="A transit itinerary: walk, wait estimate, ride, stops, and a fare breakdown" />
+          <figcaption>The itinerary, waits and the fare breakdown.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- diagram -->
+    <section class="sec container" id="diagram" aria-labelledby="diagram-h">
+      <div class="sec-head">
+        <h2 id="diagram-h">A transit map, drawn for you.</h2>
+        <p class="lead">Your network untangled onto horizontal, vertical and 45° runs, in the style of a metro map, with every station in order.</p>
+      </div>
+      <figure class="frame zoomable wide">
+        <img data-shot="d-schem" data-sizes="(min-width: 90rem) 1312px, 100vw" alt="An automatic schematic transit map of Sarrant's rail, metro and ferry lines" />
+        <figcaption>Generated automatically from the Sarrant export.</figcaption>
+      </figure>
+      <div class="grid-3 grid-even">
+        <figure class="frame zoomable">
+          <img data-shot="d-schem-line" data-sizes="(min-width: 64rem) 32vw, 100vw" alt="One metro line highlighted on the schematic map with its stops listed" />
+          <figcaption>Tap a line to follow it.</figcaption>
+        </figure>
+        <figure class="frame zoomable">
+          <img data-shot="d-schem-station" data-sizes="(min-width: 64rem) 32vw, 100vw" alt="A station selected on the schematic map, with its lines and journey buttons" />
+          <figcaption>Tap a station to plan from it.</figcaption>
+        </figure>
+        <figure class="frame zoomable">
+          <img data-shot="d-schem-route" data-sizes="(min-width: 64rem) 32vw, 100vw" alt="A planned journey highlighted on the schematic map" />
+          <figcaption>See a journey on the diagram.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- prices -->
+    <section class="band band-paper" id="prices" aria-labelledby="prices-h">
+      <div class="container sec">
+        <div class="sec-head">
+          <h2 id="prices-h">Your prices, your currency.</h2>
+          <p class="lead">Add what the export leaves out: toll fees, fares with distance surcharges and transfer rules. They stay in your browser and carry over to newer exports.</p>
+        </div>
+        <div class="panels panels-tall">
+          <figure class="panel zoomable">
+            <img data-shot="e-pricing-fares" data-sizes="(min-width: 64rem) 400px, 90vw" alt="Transit fares editor: transfer rules, default fares per mode and custom fares per line" />
+            <figcaption>Fares per mode or per line, with transfer rules.</figcaption>
+          </figure>
+          <figure class="panel zoomable">
+            <img data-shot="e-pricing-tolls" data-sizes="(min-width: 64rem) 400px, 90vw" alt="Toll editor: a city-wide default fee and every booth listed" />
+            <figcaption>A default toll and every booth.</figcaption>
+          </figure>
+          <figure class="panel zoomable">
+            <img data-shot="e-pricing-currency" data-sizes="(min-width: 64rem) 400px, 90vw" alt="Currency settings with presets, symbol position and a live preview" />
+            <figcaption>Any currency, formatted your way.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- explore -->
+    <section class="sec container" id="explore" aria-labelledby="explore-h">
+      <div class="sec-head">
+        <h2 id="explore-h">Click anything.</h2>
+        <p class="lead">Stations, lines, buildings, districts and booths each open with everything the export knows.</p>
+      </div>
+      <div class="mosaic">
+        <figure class="frame zoomable m-wide">
+          <img data-shot="d-building-asset" data-sizes="(min-width: 64rem) 66vw, 100vw" alt="A station made of 25 buildings, all highlighted as one asset" />
+          <figcaption>Multi-part assets select as one: this station is 25 buildings.</figcaption>
+        </figure>
+        <figure class="panel zoomable">
+          <img data-shot="e-station" data-sizes="(min-width: 64rem) 30vw, 90vw" alt="Station panel for Sarrant Central with its line" />
+          <figcaption>Stations and their lines.</figcaption>
+        </figure>
+        <figure class="panel zoomable">
+          <img data-shot="e-line" data-sizes="(min-width: 64rem) 30vw, 90vw" alt="Metro Line 1 panel with its fare and stops in order" />
+          <figcaption>Lines, stops in order, fares.</figcaption>
+        </figure>
+        <figure class="frame zoomable m-wide">
+          <img data-shot="d-district" data-sizes="(min-width: 64rem) 66vw, 100vw" alt="The Sinclair district highlighted with its area, buildings and stations" />
+          <figcaption>Districts, rebuilt from the export, with their stats.</figcaption>
+        </figure>
+        <figure class="frame zoomable m-wide">
+          <img data-shot="d-search" data-sizes="(min-width: 64rem) 66vw, 100vw" alt="Search results for stations, roads and landmarks" />
+          <figcaption>Search places, roads and lines.</figcaption>
+        </figure>
+        <figure class="panel zoomable">
+          <img data-shot="e-layers" data-sizes="(min-width: 64rem) 30vw, 90vw" alt="Map type chooser: Default, Terrain and Night, with labels and 3D terrain" />
+          <figcaption>Three styles, labels, 3D terrain.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- mobile -->
+    <section class="band band-ink" id="mobile" aria-labelledby="mobile-h">
+      <div class="container sec">
+        <div class="sec-head">
+          <h2 id="mobile-h">In your pocket.</h2>
+          <p class="lead">Bottom sheets, a directions card and round controls, laid out for phones.</p>
+        </div>
+      </div>
+      <div class="phones" tabindex="0" aria-label="Phone screenshots, scroll sideways">
+        <figure class="phone zoomable"><img data-shot="m-map" data-sizes="280px" alt="The map on a phone with overlay chips and round controls" /><figcaption>The map</figcaption></figure>
+        <figure class="phone zoomable"><img data-shot="m-station" data-sizes="280px" alt="A station's bottom sheet on a phone" /><figcaption>A station sheet</figcaption></figure>
+        <figure class="phone zoomable"><img data-shot="m-transit" data-sizes="280px" alt="Transit options on a phone" /><figcaption>Transit options</figcaption></figure>
+        <figure class="phone zoomable"><img data-shot="m-transit-steps" data-sizes="280px" alt="A transit itinerary with fare on a phone" /><figcaption>The itinerary</figcaption></figure>
+        <figure class="phone zoomable"><img data-shot="m-schem" data-sizes="280px" alt="The schematic transit map on a phone" /><figcaption>The transit map</figcaption></figure>
+        <figure class="phone zoomable"><img data-shot="m-night-3d" data-sizes="280px" alt="Night style in 3D on a phone" /><figcaption>Night, in 3D</figcaption></figure>
+        <figure class="phone zoomable"><img data-shot="m-layers" data-sizes="280px" alt="Map type sheet on a phone over the terrain style" /><figcaption>Map styles</figcaption></figure>
+      </div>
+    </section>
+
+    <!-- languages -->
+    <section class="sec container" id="languages" aria-labelledby="lang-h">
+      <div class="split">
+        <div class="sec-head">
+          <h2 id="lang-h">English and 한국어.</h2>
+          <p class="lead">Switch at any time. Turn-by-turn directions are written in your language, with Korean particles fitted to every road name.</p>
+          <p class="fine">Shown with the city's original Korean names.</p>
+        </div>
+        <figure class="frame zoomable">
+          <img data-shot="d-korean" data-sizes="(min-width: 64rem) 60vw, 100vw" alt="The Korean interface showing a transit itinerary in Korean" />
+          <figcaption>The same transit journey, in Korean.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- start -->
+    <section class="close" aria-labelledby="start-h">
+      <div class="container close-in">
+        <div>
+          <h2 id="start-h">Bring your city.</h2>
+          <ol class="route">
+            <li><b>1</b><span>Export your city in game with the CSLMapView mod.</span></li>
+            <li><b>2</b><span>Open Skyline Atlas.</span></li>
+            <li><b>3</b><span>Drop the .cslmap file. It is read in your browser; nothing is uploaded.</span></li>
+          </ol>
+          <a class="btn btn-primary btn-lg" href="/">Open your export</a>
+        </div>
+        <figure class="panel close-shot">
+          <img data-shot="e-welcome" data-sizes="(min-width: 64rem) 560px, 90vw" alt="The Skyline Atlas start screen with its drop zone" />
+          <figcaption>The start screen: drop a file and go.</figcaption>
+        </figure>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="container foot-in">
+      <a class="mark" href="/"><span class="mark-pin" aria-hidden="true"></span>Skyline Atlas</a>
+      <p>Every screenshot on this page is the live app at skyline.codz.me. For this page the city's Korean place names are shown in English; the map data itself is unchanged.</p>
+      <nav aria-label="Footer"><a href="/">Open the app</a><a href="#main">Back to top</a></nav>
+    </div>
+  </footer>
+
+  <dialog class="lightbox" aria-label="Screenshot">
+    <form method="dialog"><button class="lb-close" aria-label="Close">Close</button></form>
+    <img alt="" />
+    <p class="lb-cap"></p>
+  </dialog>
+
+  <script type="module" src="/src/showcase/showcase.ts"></script>
+</body>
+</html>
