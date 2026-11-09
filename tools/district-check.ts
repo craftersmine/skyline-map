@@ -1,6 +1,7 @@
 // District areas are rebuilt from the district ids public-transport nodes record
 // (the only nodes with real ids). This hides 10% of them, rebuilds from the rest, and scores whether each hidden node lands
-// in the district it really records (incl. "no district"), old vs new method.
+// in the district it really records (incl. "no district"), old vs new method, and counts districts that come
+// out in several pieces (a sign of a broken fill: in-game districts are usually one painted area).
 //   npm run check:districts [files...]
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
@@ -23,7 +24,7 @@ function oldGrid(nodes: { x: number; z: number; dist: number }[]) {
   for (let h = 0; h < q.length; h++) { const k = q[h], i = k % dn, j = (k / dn) | 0; if (dd[k] >= 6) continue; for (const [a, b] of [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]]) { if (a < 0 || b < 0 || a >= dn || b >= dn) continue; const p = b * dn + a; if (g[p]) continue; g[p] = g[k]; dd[p] = dd[k] + 1; q.push(p); } }
   return (x: number, z: number) => { const i = Math.floor((x + HALF) / DC), j = Math.floor((z + HALF) / DC); return i >= 0 && j >= 0 && i < dn && j < dn ? g[j * dn + i] : 0; };
 }
-let worst = 1;
+let worst = 1, mostSplit = 0;
 for (const f of files) {
   const city = parseCity(readFileSync(f, 'utf8'));
   // only public-transport nodes carry a real district id; they are the ground truth
@@ -43,6 +44,20 @@ for (const f of files) {
   const fmt = (s: number[]) => `in districts ${(s[0] / s[1] * 100).toFixed(1)}%  outside ${(s[2] / s[3] * 100).toFixed(1)}%  overall ${((s[0] + s[2]) / (s[1] + s[3]) * 100).toFixed(1)}%`;
   const acc = (sc.new[0] + sc.new[2]) / (sc.new[1] + sc.new[3]);
   worst = Math.min(worst, acc);
-  console.log(`${path.basename(f).padEnd(34)} old: ${fmt(sc.old)}\n${''.padEnd(34)} new: ${fmt(sc.new)}`);
+  // pieces: districts broken into separate patches (8-connected cells) look wrong on the map
+  const pieces = (G: ReturnType<typeof districtGrid>) => {
+    const seen = new Uint8Array(G.grid.length), count = new Map<number, number>();
+    for (let k = 0; k < G.grid.length; k++) {
+      const id = G.grid[k]; if (!id || seen[k]) continue;
+      count.set(id, (count.get(id) ?? 0) + 1);
+      const st = [k]; seen[k] = 1;
+      while (st.length) { const c = st.pop()!, i = c % G.n, j = (c / G.n) | 0; for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) { const a = i + di, b = j + dj; if (a < 0 || b < 0 || a >= G.n || b >= G.n) continue; const q = b * G.n + a; if (!seen[q] && G.grid[q] === id) { seen[q] = 1; st.push(q); } } }
+    }
+    return [...count.values()].filter((v) => v > 1).length;
+  };
+  const split = pieces(districtGrid([...truth, ...extra]));
+  console.log(`${path.basename(f).padEnd(34)} old: ${fmt(sc.old)}\n${''.padEnd(34)} new: ${fmt(sc.new)}\n${''.padEnd(34)} districts in more than one piece: ${split}`);
+  mostSplit = Math.max(mostSplit, split);
 }
 if (worst < 0.9) { console.error('district accuracy below 90%'); process.exit(1); }
+if (mostSplit > 3) { console.error('districts come out in pieces: the fill is broken'); process.exit(1); }

@@ -216,22 +216,18 @@ export function buildingGroups(buildings: CBuilding[]): Map<number, number> {
  * or explicitly outside (0) — plus each district's label point, which the game
  * places in the middle of the district, are the samples.
  */
+export interface DistrictSample { x: number; z: number; dist: number }
 export function districtSamples(city: CityData) {
-  const out: { x: number; z: number; dist: number }[] = [];
+  const out: DistrictSample[] = [];
   for (const n of city.nodes.values()) if (n.srv === 'PublicTransport') out.push(n);
   for (const d of city.districts) if (d.id && !(Math.abs(d.x) >= HALF - 1 && Math.abs(d.z) >= HALF - 1)) out.push({ x: d.x, z: d.z, dist: d.id });
   return out;
 }
-
-/**
- * District areas: every cell of the game's own 33.75 m district grid takes the
- * label of its nearest sample (straight-line, via an 8-neighbour distance
- * transform), "no district" samples included so districts don't bleed into
- * undistricted land. Cells farther than `reach` from any sample stay unlabelled.
- */
-export function districtGrid(nodes: { x: number; z: number; dist: number }[], reach = 600, noneBias = 20) {
+export function districtGrid(nodes: DistrictSample[], reach = 600, noneBias = 20) {
   const cell = MAP_SIZE / 512, n = 512;
-  const label = new Int32Array(n * n), dist = new Float32Array(n * n).fill(Infinity);
+  // distances in full precision: compared against the heap's own values, a Float32 copy rounds below them
+  // about half the time and the cell is then skipped, never growing (patchy, broken-up districts)
+  const label = new Int32Array(n * n), dist = new Float64Array(n * n).fill(Infinity);
   const h: [number, number][] = []; // simple binary heap of [distance, cell]
   const push = (d: number, k: number) => { h.push([d, k]); let i = h.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (h[p][0] <= h[i][0]) break; [h[p], h[i]] = [h[i], h[p]]; i = p; } };
   const pop = () => { const top = h[0], last = h.pop()!; if (h.length) { h[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < h.length && h[l][0] < h[m][0]) m = l; if (r < h.length && h[r][0] < h[m][0]) m = r; if (m === i) break; [h[m], h[i]] = [h[i], h[m]]; i = m; } } return top; };
