@@ -65,6 +65,10 @@ body=f'''
         <p>Directions work for driving, transit, walking and cycling, on your city's own road network and transit lines. How that works is in <a href="/blog/cities-skylines-route-planner">route planning in your city</a>.</p>
         <h3>See the transit network as a diagram</h3>
         <p>The Transit map button draws a metro-style diagram of your lines automatically. More in <a href="/blog/cities-skylines-transit-map">making a transit map of your city</a>.</p>
+        <h3>See how far you can get</h3>
+        <p>Right-click any spot and the map shades everywhere you can reach in 15 to 60 minutes. See <a href="/blog/cities-skylines-travel-time-map">travel-time maps</a>.</p>
+        <h3>Watch it grow</h3>
+        <p>Load older exports and drag a slider through your city's history. See <a href="/blog/cities-skylines-time-lapse">making a time-lapse</a>.</p>
         <h3>Measure, search and share</h3>
         <p>The measure tool gives distance, area and an elevation profile. Search finds stations, roads and landmarks. You can also save the current view as a PNG.</p>
 
@@ -239,7 +243,97 @@ body=f'''
           <li>Timetables, which is why transit waits are estimates.</li>
         </ul>
         <p>For a closer look at what is and isn't in the file, see <a href="/blog/whats-in-a-cslmapview-export">what a CSLMapView export contains</a>.</p>
+
+        <h2>Everywhere at once</h2>
+        <p>Directions plan one trip. To see every place reachable from a spot within a time limit, use a <a href="/blog/cities-skylines-travel-time-map">travel-time map</a>, which uses the same engine.</p>
 '''),
+# ------------------------------------------------------------------------------------------------
+dict(
+slug='cities-skylines-travel-time-map',
+title='How far can you get in 30 minutes? Travel-time maps for your Cities: Skylines city',
+short='Travel-time maps',
+desc='Shade everywhere you can reach from one spot in your Cities: Skylines city within 15 to 60 minutes, by car, transit, walking or bike. Find gaps in your transit network and plan the next line.',
+lead='A travel-time map answers one question at a glance: from here, where can I get to in half an hour? Skyline Map draws one for any spot in your city, using your real roads and transit lines.',
+shot='d-reach-drive',
+body=f"""
+        <p>Planners call these isochrone maps. They are one of the quickest ways to see whether a neighbourhood is well connected, and in Cities: Skylines they show which areas your metro actually serves and which ones only look close on the map.</p>
+        {fig('d-reach-drive', 'Everywhere reachable by car within 30 minutes from a downtown station, covering most of the region', 'Thirty minutes by car from downtown: 42.8 km² of the region.')}
+
+        <h2>Make one</h2>
+        <ol>
+          <li>Open your export at <a href="/">skyline.codz.me</a> (see <a href="/blog/cities-skylines-city-map">the walkthrough</a> if you haven't yet).</li>
+          <li>Right-click the spot you care about and choose <b>How far can I get from here?</b> On a phone, use the menu: it starts from the middle of the screen.</li>
+          <li>Pick <b>Driving</b>, <b>Transit</b>, <b>Walking</b> or <b>Cycling</b>, and a limit of 15, 30, 45 or 60 minutes.</li>
+        </ol>
+        <p>The map shades everything you can reach in four bands, darkest for the nearest quarter of the time, and the panel shows the reachable land area. Click anywhere else, or drag the pin, to try another start.</p>
+
+        <h2>How the times are worked out</h2>
+        <p>The times come from the same engine as <a href="/blog/cities-skylines-route-planner">Directions</a>, so the two always agree:</p>
+        <ul>
+          <li><b>Driving</b> follows the roads cars may use, obeys one-way streets and adds time at junctions and turns. A place only counts as reached by car near an ordinary road, because you can't stop on a motorway or a ramp.</li>
+          <li><b>Transit</b> walks to a stop, waits the estimated average time for that mode, rides at speeds taken from the track or road, and can change lines. Waits are estimates, since the export has no timetables.</li>
+          <li><b>Walking</b> and <b>cycling</b> use pavements, paths and bike lanes.</li>
+        </ul>
+        <p>From the network, the last stretch to a place is on foot, up to 300 m. Water is never shaded.</p>
+
+        <h2>What it's good for</h2>
+        <h3>Finding transit gaps</h3>
+        <p>Start at a busy station and pick Transit. Shading that follows the lines in thin ribbons means people only benefit right next to the stops. A district that stays unshaded at 30 minutes, while it is close by car, is a good candidate for your next line or a feeder bus.</p>
+        {fig('d-reach', 'Everywhere reachable by transit within 45 minutes, shaded in bands that follow the rail lines', 'Forty-five minutes by transit from the same area: reach follows the rail lines.')}
+        <h3>Comparing modes</h3>
+        <p>Switch between Driving and Transit from the same start. When the transit area is a small fraction of the car area, your citizens have a good reason to drive.</p>
+        <h3>Checking a new connection</h3>
+        <p>Build a new line or bridge in game, export again and compare the same start before and after. The reachable area is a simple number to track.</p>
+"""),
+# ------------------------------------------------------------------------------------------------
+dict(
+slug='cities-skylines-time-lapse',
+title='Make a time-lapse of your Cities: Skylines city from old saves',
+short='City time-lapse',
+desc='Turn the CSLMapView exports you already have into a time-lapse of your Cities: Skylines city: drag a slider or press Play to watch roads, buildings and transit lines appear.',
+lead='If you export your city now and then, you already have its history. Skyline Map lines those exports up so you can watch the city grow, one save at a time.',
+shot='d-lapse-late',
+body=f"""
+        <figure class="frame">
+          <img data-shot="d-lapse-early" data-sizes="(min-width: 50rem) 720px, 100vw" alt="East Sarrant in January 2026: streets end at the river" />
+          <figcaption>January: the streets stop at the river.</figcaption>
+        </figure>
+        <figure class="frame">
+          <img data-shot="d-lapse-late" data-sizes="(min-width: 50rem) 720px, 100vw" alt="East Sarrant in November 2026, with a new neighbourhood across the river and more roads" />
+          <figcaption>November: a new neighbourhood across the river.</figcaption>
+        </figure>
+
+        <h2>Keep your exports</h2>
+        <p>A time-lapse needs several exports of the same city. By default each CSLMapView export can overwrite the last one, so first make sure they are kept:</p>
+        <ul>
+          <li>Turn on <b>timestamps in file names</b> in the mod's settings. Each export then gets its own file, like <code>Sarrant-20261107-234707.cslmap</code>.</li>
+          <li>Optionally turn on <b>export on save</b>, so a new file appears every time you save the game.</li>
+        </ul>
+        <p>They all land in the same folder (<a href="/blog/where-cslmapview-saves-files">here's where</a>). The more saves you have, and the more spread out they are, the smoother the time-lapse.</p>
+
+        <h2>Make the time-lapse</h2>
+        <ol>
+          <li>Open your <b>newest</b> export at <a href="/">skyline.codz.me</a>.</li>
+          <li>Open the menu and choose <b>City time-lapse</b>, then <b>Choose older exports</b>.</li>
+          <li>In the file picker, select your older exports. Selecting the whole folder is fine: files from other cities, and exports newer than the open one, are skipped.</li>
+          <li>Drag the slider, or press <b>Play</b>.</li>
+        </ol>
+        {fig('e-lapse', 'The time-lapse panel: an export date, a slider with Play, and the building count and road length at that date', 'Each step shows the export date, the number of buildings and the road length.', '(min-width: 50rem) 420px, 100vw')}
+        <p>Reading is quick, because only the identities of roads, buildings and lines are read from the older files, not their shapes. Twenty-eight exports of a large city take a few seconds.</p>
+        <p>To select many files at once: on a Mac, click the first file and Shift-click the last, or press <kbd>⌘</kbd><kbd>A</kbd>. On Windows, use <kbd>Ctrl</kbd> instead of <kbd>⌘</kbd>.</p>
+
+        <h2>How it works, and its limits</h2>
+        <p>The map you see is always your newest export. Each road, building and transit line in it is matched against the older files, and appears from the first export that already had it.</p>
+        <p>Cities: Skylines reuses ids after something is demolished, so an id alone could credit a brand-new road to an old one that used the same slot. Skyline Map therefore matches a road by its id and the two junctions it connects, a building by its id and its asset, and a line by its id and type.</p>
+        <p>Because only the newest export is drawn, anything you demolished along the way doesn't appear in earlier frames. If you rebuilt a whole district, the time-lapse shows the new version appearing, not the old one disappearing.</p>
+
+        <h2>Ideas</h2>
+        <ul>
+          <li><b>Record it.</b> Zoom to a part of town that changed a lot, press Play and screen-record it. Short clips like that are popular on city-builder forums.</li>
+          <li><b>Track your growth.</b> The building count and road length per export are a quick record of how fast the city grew.</li>
+          <li><b>Combine with transit.</b> Leave the transit layer on and watch your network spread across the map.</li>
+        </ul>
+"""),
 # ------------------------------------------------------------------------------------------------
 dict(
 slug='cities-skylines-tolls-and-fares',

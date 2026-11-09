@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Make a time-lapse of your Cities: Skylines city from old saves</title>
+  <meta name="description" content="Turn the CSLMapView exports you already have into a time-lapse of your Cities: Skylines city: drag a slider or press Play to watch roads, buildings and transit lines appear." />
+  <link rel="canonical" href="https://skyline.codz.me/blog/cities-skylines-time-lapse" />
+  <meta name="theme-color" content="#1a73e8" />
+  <meta name="color-scheme" content="light" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="alternate" type="application/rss+xml" title="Skyline Map blog" href="/blog/feed.xml" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Skyline Map" />
+  <meta property="og:title" content="Make a time-lapse of your Cities: Skylines city from old saves" />
+  <meta property="og:description" content="Turn the CSLMapView exports you already have into a time-lapse of your Cities: Skylines city: drag a slider or press Play to watch roads, buildings and transit lines appear." />
+  <meta property="og:url" content="https://skyline.codz.me/blog/cities-skylines-time-lapse" />
+  <meta property="og:image" content="https://skyline.codz.me/showcase/d-lapse-late-2400.webp" />
+  <meta property="og:locale" content="en_US" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Make a time-lapse of your Cities: Skylines city from old saves" />
+  <meta name="twitter:description" content="Turn the CSLMapView exports you already have into a time-lapse of your Cities: Skylines city: drag a slider or press Play to watch roads, buildings and transit lines appear." />
+  <meta name="twitter:image" content="https://skyline.codz.me/showcase/d-lapse-late-2400.webp" />
+  <script type="application/ld+json">[{"@context": "https://schema.org", "@type": "BlogPosting", "@id": "https://skyline.codz.me/blog/cities-skylines-time-lapse#post", "mainEntityOfPage": "https://skyline.codz.me/blog/cities-skylines-time-lapse", "headline": "Make a time-lapse of your Cities: Skylines city from old saves", "description": "Turn the CSLMapView exports you already have into a time-lapse of your Cities: Skylines city: drag a slider or press Play to watch roads, buildings and transit lines appear.", "image": "https://skyline.codz.me/showcase/d-lapse-late-2400.webp", "datePublished": "2026-11-09", "dateModified": "2026-11-09", "inLanguage": "en", "author": {"@type": "Organization", "name": "Skyline Map", "url": "https://skyline.codz.me/", "logo": {"@type": "ImageObject", "url": "https://skyline.codz.me/icon-512.png"}}, "publisher": {"@type": "Organization", "name": "Skyline Map", "url": "https://skyline.codz.me/", "logo": {"@type": "ImageObject", "url": "https://skyline.codz.me/icon-512.png"}}, "about": {"@type": "VideoGame", "name": "Cities: Skylines"}, "isPartOf": {"@type": "Blog", "@id": "https://skyline.codz.me/blog/#blog", "name": "Skyline Map blog", "url": "https://skyline.codz.me/blog/"}}, {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Skyline Map", "item": "https://skyline.codz.me/"}, {"@type": "ListItem", "position": 2, "name": "Blog", "item": "https://skyline.codz.me/blog/"}, {"@type": "ListItem", "position": 3, "name": "City time-lapse", "item": "https://skyline.codz.me/blog/cities-skylines-time-lapse"}]}]</script>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%231a73e8' d='M16 2C10.5 2 6 6.4 6 11.9 6 19.3 16 30 16 30s10-10.7 10-18.1C26 6.4 21.5 2 16 2z'/%3E%3Ccircle cx='16' cy='12' r='4' fill='white'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/showcase/showcase.css" />
+  <link rel="stylesheet" href="/src/blog/blog.css" />
+  <script type="module" src="/src/consent.ts"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="top blog-top">
+    <div class="top-in">
+      <a class="mark" href="/"><span class="mark-pin" aria-hidden="true"></span>Skyline Map</a>
+      <nav aria-label="Site"><a href="/blog/">Blog</a><a href="/showcase">Tour</a></nav>
+      <a class="btn btn-primary btn-sm" href="/">Open your export</a>
+    </div>
+  </header>
+
+  <main id="main" class="container post">
+    <article>
+      <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">Blog</a> / City time-lapse</nav>
+      <h1>Make a time-lapse of your Cities: Skylines city from old saves</h1>
+      <p class="lead">If you export your city now and then, you already have its history. Skyline Map lines those exports up so you can watch the city grow, one save at a time.</p>
+      <p class="meta"><time datetime="2026-11-09">November 9, 2026</time></p>
+      <div class="prose">
+        <figure class="frame">
+          <img data-shot="d-lapse-early" data-sizes="(min-width: 50rem) 720px, 100vw" alt="East Sarrant in January 2026: streets end at the river" />
+          <figcaption>January: the streets stop at the river.</figcaption>
+        </figure>
+        <figure class="frame">
+          <img data-shot="d-lapse-late" data-sizes="(min-width: 50rem) 720px, 100vw" alt="East Sarrant in November 2026, with a new neighbourhood across the river and more roads" />
+          <figcaption>November: a new neighbourhood across the river.</figcaption>
+        </figure>
+
+        <h2>Keep your exports</h2>
+        <p>A time-lapse needs several exports of the same city. By default each CSLMapView export can overwrite the last one, so first make sure they are kept:</p>
+        <ul>
+          <li>Turn on <b>timestamps in file names</b> in the mod's settings. Each export then gets its own file, like <code>Sarrant-20261107-234707.cslmap</code>.</li>
+          <li>Optionally turn on <b>export on save</b>, so a new file appears every time you save the game.</li>
+        </ul>
+        <p>They all land in the same folder (<a target="_blank" rel="noopener" href="/blog/where-cslmapview-saves-files">here's where</a>). The more saves you have, and the more spread out they are, the smoother the time-lapse.</p>
+
+        <h2>Make the time-lapse</h2>
+        <ol>
+          <li>Open your <b>newest</b> export at <a target="_blank" rel="noopener" href="/">skyline.codz.me</a>.</li>
+          <li>Open the menu and choose <b>City time-lapse</b>, then <b>Choose older exports</b>.</li>
+          <li>In the file picker, select your older exports. Selecting the whole folder is fine: files from other cities, and exports newer than the open one, are skipped.</li>
+          <li>Drag the slider, or press <b>Play</b>.</li>
+        </ol>
+        <figure class="frame">
+          <img data-shot="e-lapse" data-sizes="(min-width: 50rem) 420px, 100vw" alt="The time-lapse panel: an export date, a slider with Play, and the building count and road length at that date" />
+          <figcaption>Each step shows the export date, the number of buildings and the road length.</figcaption>
+        </figure>
+        <p>Reading is quick, because only the identities of roads, buildings and lines are read from the older files, not their shapes. Twenty-eight exports of a large city take a few seconds.</p>
+        <p>To select many files at once: on a Mac, click the first file and Shift-click the last, or press <kbd>⌘</kbd><kbd>A</kbd>. On Windows, use <kbd>Ctrl</kbd> instead of <kbd>⌘</kbd>.</p>
+
+        <h2>How it works, and its limits</h2>
+        <p>The map you see is always your newest export. Each road, building and transit line in it is matched against the older files, and appears from the first export that already had it.</p>
+        <p>Cities: Skylines reuses ids after something is demolished, so an id alone could credit a brand-new road to an old one that used the same slot. Skyline Map therefore matches a road by its id and the two junctions it connects, a building by its id and its asset, and a line by its id and type.</p>
+        <p>Because only the newest export is drawn, anything you demolished along the way doesn't appear in earlier frames. If you rebuilt a whole district, the time-lapse shows the new version appearing, not the old one disappearing.</p>
+
+        <h2>Ideas</h2>
+        <ul>
+          <li><b>Record it.</b> Zoom to a part of town that changed a lot, press Play and screen-record it. Short clips like that are popular on city-builder forums.</li>
+          <li><b>Track your growth.</b> The building count and road length per export are a quick record of how fast the city grew.</li>
+          <li><b>Combine with transit.</b> Leave the transit layer on and watch your network spread across the map.</li>
+        </ul>
+      </div>
+    </article>
+    <aside class="cta" aria-labelledby="cta-h">
+      <h2 id="cta-h">Open your city as a map.</h2>
+      <p>Free, in your browser. Your file is read on your computer and never uploaded.</p>
+      <a class="btn btn-primary" href="/" target="_blank" rel="noopener">Open your export</a>
+    </aside>
+    <aside class="related" aria-labelledby="rel-h">
+      <h2 id="rel-h">More guides</h2>
+      <ul class="related-list">
+        <li><a class="card" href="/blog/cities-skylines-tolls-and-fares">
+          <img data-shot="d-toll" data-sizes="(min-width: 50rem) 360px, 100vw" alt="" />
+          <div class="card-body"><h3>Toll roads and transit fares for your Cities: Skylines city</h3><p>Find the toll booths in your Cities: Skylines city, see which routes pay tolls, avoid them, and set your own toll fees, transit fares, transfer rules and currency.</p></div>
+        </a></li><li><a class="card" href="/blog/whats-in-a-cslmapview-export">
+          <img data-shot="d-building-asset" data-sizes="(min-width: 50rem) 360px, 100vw" alt="" />
+          <div class="card-body"><h3>What a CSLMapView export contains, and what it doesn&#x27;t</h3><p>A plain guide to the data in a Cities: Skylines CSLMapView .cslmap file: roads, lanes, buildings, transit, terrain and districts, plus what is missing and how Skyline Map fills the gaps.</p></div>
+        </a></li>
+      </ul>
+    </aside>
+  </main>
+  <footer class="foot">
+    <div class="container foot-in">
+      <a class="mark" href="/"><span class="mark-pin" aria-hidden="true"></span>Skyline Map</a>
+      <p>A free map viewer for Cities: Skylines CSLMapView exports. Screenshots are the live app; place names in them are shown in English.</p>
+      <nav aria-label="Footer"><a href="/">Open the app</a><a href="/blog/">Blog</a><a href="/showcase">Tour</a><a href="/privacy">Privacy</a></nav>
+    </div>
+  </footer>
+</body>
+</html>

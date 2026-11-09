@@ -160,6 +160,7 @@ export const KO: Record<string, string> = {
   "Reading {i} of {n}…": "{n}개 중 {i}번째 읽는 중…",
   "Skipped {n} files from other cities.": "다른 도시의 파일 {n}개는 건너뛰었습니다.",
   "No older exports of {city} found.": "{city}의 예전 내보내기 파일을 찾지 못했습니다.",
+  "Buy me a coffee": "커피 한 잔 사주기",
   "Cookie settings": "쿠키 설정",
   "New to CSLMapView?": "CSLMapView가 처음인가요?",
   "Read the guides": "가이드 읽기(영어)",

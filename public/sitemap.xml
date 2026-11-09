@@ -46,6 +46,18 @@
     <image:image><image:loc>https://skyline.codz.me/showcase/d-drive-2400.webp</image:loc></image:image>
   </url>
   <url>
+    <loc>https://skyline.codz.me/blog/cities-skylines-travel-time-map</loc>
+    <lastmod>2026-11-09</lastmod>
+    <priority>0.7</priority>
+    <image:image><image:loc>https://skyline.codz.me/showcase/d-reach-drive-2400.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://skyline.codz.me/blog/cities-skylines-time-lapse</loc>
+    <lastmod>2026-11-09</lastmod>
+    <priority>0.7</priority>
+    <image:image><image:loc>https://skyline.codz.me/showcase/d-lapse-late-2400.webp</image:loc></image:image>
+  </url>
+  <url>
     <loc>https://skyline.codz.me/blog/cities-skylines-tolls-and-fares</loc>
     <lastmod>2026-11-09</lastmod>
     <priority>0.7</priority>
