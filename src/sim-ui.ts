@@ -262,17 +262,19 @@ export function createSim(map: MLMap, deps: { worker: Worker; city: () => BuiltC
   }
   function rulesInfo(d: SimData) {
     const r = d.rulesSummary;
-    if (!r) return '';
-    const parts = [
+    const parts = r ? [
       r.oneway ? tn(r.oneway, '{n} one-way road', '{n} one-way roads') : '',
       r.speed ? tn(r.speed, '{n} road with a TM:PE speed limit', '{n} roads with TM:PE speed limits') : '',
       r.carRestrict ? (r.restrictBan ? tn(r.carRestrict, '{n} road closed to cars in a direction', '{n} roads closed to cars in a direction') : tn(r.carRestrict, '{n} road restricted for cars (used only if there is no other way)', '{n} roads restricted for cars (used only if there is no other way)')) : '',
       r.uturnBan ? tn(r.uturnBan, '{n} place where U-turns are not allowed', '{n} places where U-turns are not allowed') : '',
       r.turnBan ? tn(r.turnBan, '{n} turn ruled out by lane arrows or lane connections', '{n} turns ruled out by lane arrows or lane connections') : '',
       r.track ? tn(r.track, '{n} track or road with a TM:PE limit for transit', '{n} tracks or roads with TM:PE limits for transit') : '',
-    ].filter(Boolean);
-    if (!parts.length) return '';
-    return `<h4>${t('Used for directions')}</h4><p class="sim-note sim-rules">${esc(t('Directions, reach and closures now follow the traffic rules in your save: {list}.', { list: parts.join(', ') }))}${r.leftHand ? ' ' + esc(t('Left-hand traffic: one-way directions and per-direction rules aren\'t applied yet.')) : ''} ${esc(t('Traffic density changes travel times only when you switch on traffic-aware routing in Directions, and then only as an estimate.'))}</p>`;
+    ].filter(Boolean) : [];
+    // traffic densities are used (as an opt-in estimate) even when the save has no rules
+    const traffic = d.traffic?.ids.length ? esc(t('Traffic density changes travel times only when you switch on traffic-aware routing in Directions, and then only as an estimate.')) : '';
+    if (!parts.length && !traffic) return '';
+    const rules = parts.length ? esc(t('Directions, reach and closures now follow the traffic rules in your save: {list}.', { list: parts.join(', ') })) + (r!.leftHand ? ' ' + esc(t('Left-hand traffic: one-way directions and per-direction rules aren\'t applied yet.')) : '') : '';
+    return `<h4>${t('Used for directions')}</h4><p class="sim-note sim-rules">${[rules, traffic].filter(Boolean).join(' ')}</p>`;
   }
   function layerPicker(d: SimData) {
     const avail = (l: Layer) => l === 'none' || (l === 'traffic' ? !!d.traffic : !!d.grids);

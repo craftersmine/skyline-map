@@ -424,16 +424,16 @@ export class Router {
       if (!found) break;
       const path = found.path;
       const hits = 'sHit' in found && found.sHit && found.tHit ? { s: found.sHit, t: found.tHit } : null;
-      let r: Route, access: { dist: number; time: number };
+      let r: Route, access: { dist: number; time: number }, driven: Edge[];
       if (hits) {
         // driving joined part-way along roads: its own trimmed pieces, time and access to the joined points
         const parts = this.driveParts(path, hits.s, hits.t);
-        r = this.partsRoute(parts, mode, from, to);
+        r = this.partsRoute(parts, mode, from, to); driven = parts.map((x) => x.ed); // trimmed first and last roads
         const dist = this.reach(from, parts[0].pts[0]) + this.reach(to, parts[parts.length - 1].pts.at(-1)!);
         access = { dist, time: dist / 3 };
         r.time = found.time + 30;
       } else {
-        r = this.roadRoute(path, mode, from, to, S, T);
+        r = this.roadRoute(path, mode, from, to, S, T); driven = path.map((q) => this.edges[q.e]);
         access = this.accessCost(path, from, to, mode, S, T);
         if (found.time >= 0) r.time = this.driveTime(path) + 30;
       }
@@ -443,7 +443,7 @@ export class Router {
         this.trafficOn = false;
         try { r.baseTime = (hits ? this.driveTimeOn(path, hits.s, hits.t) : this.driveTime(path)) + 30 + access.time; } finally { this.trafficOn = true; }
         let known = 0, all = 0;
-        for (const q of path) { const e = this.edges[q.e]; all += e.len; if (e.tf !== undefined) known += e.len; }
+        for (const e of driven) { all += e.len; if (e.tf !== undefined) known += e.len; }
         r.trafficShare = all > 0 ? known / all : 0;
       }
       if ('bent' in found && found.bent) this.flagAgainst(r, path);

@@ -312,7 +312,9 @@ export function createDirections(d: DirectionsDeps) {
   rulesBox.addEventListener('change', () => { st.rules = rulesBox.checked; compute(); });
   const trafficBox = $<HTMLInputElement>('#dirTraffic');
   /** the worker's router holds one traffic switch: Directions, reach and closures all follow it */
-  const sendTraffic = () => { worker.postMessage({ type: 'traffic', on: st.traffic }); $<HTMLElement>('.dir-traffic-note').hidden = !st.traffic; };
+  // st.traffic is the user's choice and outlives a removed or reloaded save; it applies while traffic data is loaded
+  const trafficOn = () => st.traffic && d.simTraffic();
+  const sendTraffic = () => { worker.postMessage({ type: 'traffic', on: trafficOn() }); $<HTMLElement>('.dir-traffic-note').hidden = !trafficOn(); };
   trafficBox.addEventListener('change', () => { st.traffic = trafficBox.checked; sendTraffic(); compute(); });
   /** the save's rules or traffic were loaded or removed: show each switch while its data exists, and re-route */
   function rulesChanged() {
@@ -321,7 +323,7 @@ export function createDirections(d: DirectionsDeps) {
     if (!on) { st.rules = true; rulesBox.checked = true; }
     const tr = d.simTraffic();
     $<HTMLElement>('#dirTrafficRow').hidden = !tr;
-    if (!tr) { st.traffic = false; trafficBox.checked = false; }
+    trafficBox.checked = st.traffic;
     sendTraffic(); // a new load resets the router's switch: send the page's choice again
     if (st.from && st.to) compute();
   }
@@ -359,7 +361,7 @@ export function createDirections(d: DirectionsDeps) {
   return {
     open, close, isOpen, onResult, redraw: () => drawRoutes(), rulesChanged,
     /** traffic-aware routing is on (reach and closures say so) */
-    trafficOn: () => st.traffic,
+    trafficOn,
     /** language changed: relabel and re-ask the worker, whose step text is in the UI language */
     relang() { applyStatic(el); if (isOpen()) compute(); },
     /** a click on the map while directions are open fills the active empty field */

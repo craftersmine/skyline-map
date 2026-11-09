@@ -152,7 +152,8 @@ is loaded.
 ## Traffic-aware routing (optional estimate)
 
 Directions shows a "Traffic-aware routing" switch (교통 상황 반영) while a matched save is loaded. It is off by
-default and independent of "Traffic rules from my save". It is one setting in the worker's router, so reach and
+default and independent of "Traffic rules from my save". Once switched on, it stays on for the rest of the visit when a
+save is removed and loaded again. It is one setting in the worker's router, so reach and
 "What if it closes?" follow it too and say so.
 
 - **Model:** each matched road's driving time × a multiplier for its `m_trafficDensity` at the moment of saving.
