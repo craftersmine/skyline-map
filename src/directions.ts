@@ -69,7 +69,7 @@ export function createDirections(d: DirectionsDeps) {
       <button class="icon-btn dir-swap" title="Reverse starting point and destination" aria-label="Swap" data-i18n-title="Reverse starting point and destination" data-i18n-aria="Swap">${svg('<path d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3 5 6.99h3V14h2V6.99h3L9 3z"/>')}</button>
       <div class="dir-suggest" hidden></div>
     </div>
-    <div class="dir-options"><label><input type="checkbox" id="dirAvoidTolls" /> <span data-i18n="Avoid tolls">Avoid tolls</span></label><label id="dirRulesRow" hidden title="One-way directions, TM:PE speed limits, car restrictions and U-turn bans from your save" data-i18n-title="One-way directions, TM:PE speed limits, car restrictions and U-turn bans from your save"><input type="checkbox" id="dirRules" checked /> <span data-i18n="Traffic rules from my save">Traffic rules from my save</span></label></div>
+    <div class="dir-options"><label><input type="checkbox" id="dirAvoidTolls" /> <span data-i18n="Avoid tolls">Avoid tolls</span></label><label id="dirRulesRow" hidden title="One-way directions, TM:PE speed limits, car restrictions, U-turn bans and lane-arrow turns from your save" data-i18n-title="One-way directions, TM:PE speed limits, car restrictions, U-turn bans and lane-arrow turns from your save"><input type="checkbox" id="dirRules" checked /> <span data-i18n="Traffic rules from my save">Traffic rules from my save</span></label></div>
     </div>
     <div class="dir-sheet"><div class="dir-body"></div></div>`;
   document.body.appendChild(el);

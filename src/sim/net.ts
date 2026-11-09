@@ -18,6 +18,7 @@ export interface SaveNet {
   segTraffic: Uint8Array;         // m_trafficDensity (0-100, the % the game's Traffic info view colours by)
   segFirstLane: Uint32Array;      // m_lanes
   laneNext: Uint32Array;          // NetLane.m_nextLane
+  laneFlags: Uint16Array;         // NetLane.m_flags by lane id (Forward 0x10, Left 0x20, Right 0x40: the effective lane arrows)
   prefabNames: (string | null)[]; // PrefabCollection<NetInfo> name table
 }
 
@@ -28,10 +29,11 @@ export function readNet(sd: SaveData): SaveNet {
   const v = sd.version;
 
   // lanes
-  const laneFlags = s.eaU16(NL - 1);
+  const lf = s.eaU16(NL - 1);
+  const laneFlags = new Uint16Array(NL); laneFlags.set(lf, 1);
   const laneNext = new Uint32Array(NL);
   let nl = 0;
-  for (let i = 1; i < NL; i++) if (laneFlags[i - 1]) { laneNext[i] = s.u24(); nl++; }
+  for (let i = 1; i < NL; i++) if (laneFlags[i]) { laneNext[i] = s.u24(); nl++; }
   s.eaU8(nl); s.eaU8(nl); s.eaU8(nl); s.eaU16(nl); // reservedPrev/Next/Frame, lastReserveID
 
   // nodes: flags interleaved with flags2
@@ -92,7 +94,7 @@ export function readNet(sd: SaveData): SaveNet {
   endSection(s, end, 'NetManager');
 
   return { nodeCount: NNODE, nodeFlags, nodeFlags2, nodeX, nodeY, nodeZ, segCount: NSEG, segFlags: sf, segStart, segEnd, segPrefab,
-    segStartDir, segEndDir, segTraffic, segFirstLane, laneNext, prefabNames };
+    segStartDir, segEndDir, segTraffic, segFirstLane, laneNext, laneFlags, prefabNames };
 }
 
 // ---------------------------------------------------------------- export geometry

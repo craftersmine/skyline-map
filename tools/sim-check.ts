@@ -9,7 +9,7 @@ import os from 'node:os';
 import { gzipSync } from 'node:zlib';
 import { parseCity, type CityData } from '../src/parse';
 import { loadSim, type SimResult } from '../src/sim';
-import { readCrp, openSaveData, ASSET_DATA } from '../src/sim/reader';
+import { readCrp, openSaveData, ASSET_DATA, section, type SaveData } from '../src/sim/reader';
 import { readNet } from '../src/sim/net';
 import { readBuildings } from '../src/sim/buildings';
 import { readGrids } from '../src/sim/grids';
@@ -153,6 +153,43 @@ async function main() {
     }
     check(inflated === 0, 'reported times never include the ×1000 restriction penalty');
     check(rules.summary.uturnBan > 0, `U-turns banned where TM:PE forbids them: ${rules.summary.uturnBan} segment ends`);
+    // Phase 2: lane arrows / connections. Bans must agree with the game: no citizen car trip the game routed makes one
+    // (except as its first turn, where TM:PE relaxes arrows), and they must never make a reachable trip unreachable.
+    const trips = carTripPaths(sd), segOf = new Map(c.segs.map((x) => [x.id, x]));
+    const banSet = new Set(rules.turnBan.map((b) => b.from + ':' + b.node + ':' + b.to));
+    let moves = 0, against = 0;
+    for (const { segs: t } of trips) for (let i = 2; i < t.length; i++) {
+      const a = segOf.get(t[i - 1]), b = segOf.get(t[i]); if (!a || !b) continue;
+      const n = [a.sn, a.en].find((x) => x === b.sn || x === b.en); if (n === undefined) continue;
+      moves++; if (banSet.has(a.id + ':' + n + ':' + b.id)) against++;
+    }
+    check(rules.turnBan.length > 0 && against === 0 && moves > 100000, `lane-arrow/connection turn bans (${rules.turnBan.length}) agree with ${trips.length} car trips the game routed (${moves} turns, ${against} against a ban)`);
+    // U-turns: a trip that turns back along a segment shows two positions on it in lanes of opposite direction. At a
+    // trip's start and end the game places the car on a lane beside the building, so only mid-trip turns count.
+    const uBan = new Set(rules.uturnBan.map((u) => u.seg + ':' + u.node));
+    const arrive = (sid: number, lane: number) => {
+      const x = segOf.get(sid), l = x && c.segTypes.get(x.name)?.lanes[lane]; if (!x || !l || l.type !== 'Vehicle') return null;
+      const d = (net.segFlags[sid] & 16) ? (l.dir === 'Forward' ? 'Backward' : l.dir === 'Backward' ? 'Forward' : l.dir) : l.dir;
+      return d === 'Forward' ? x.en : d === 'Backward' ? x.sn : null;
+    };
+    let uturns = 0, uAgainst = 0;
+    for (const { pos } of trips) {
+      const veh = pos.map(([sg, l]) => arrive(sg, l) !== null), first = veh.indexOf(true), last = veh.lastIndexOf(true);
+      for (let i = first + 2; i < last; i++) {
+        const [s1, l1] = pos[i - 1], [s2, l2] = pos[i]; if (s1 !== s2 || l1 === l2) continue;
+        const n1 = arrive(s1, l1), n2 = arrive(s2, l2); if (n1 === null || n2 === null || n1 === n2) continue;
+        uturns++; if (uBan.has(s1 + ':' + n1)) uAgainst++;
+      }
+    }
+    check(uturns > 20 && uAgainst === 0, `U-turn bans agree with car trips: ${uturns} mid-trip U-turns the game routed, ${uAgainst} at a banned segment end`);
+    const noTurns = new Router(c, built.stopNames ?? new Map(), ow, tolls); noTurns.applyRules({ ...rules, turnBan: [] });
+    let lost = 0, turnChanged = 0;
+    for (const [p, q] of ends) {
+      const a = noTurns.route(p, q, 'drive')[0], b = ruled.route(p, q, 'drive')[0];
+      if (a && !b) lost++;
+      if (a && b && a.dist !== b.dist) turnChanged++;
+    }
+    check(lost === 0, `turn bans never make a reachable trip unreachable (${ends.length} drives; ${turnChanged} take another way)`);
     // clearing restores reach and transit exactly too
     const ruled3 = new Router(c, built.stopNames ?? new Map(), ow, tolls); ruled3.applyRules(rules); ruled3.clearRules();
     let reachSame = 0, transitSame = 0;
@@ -210,6 +247,30 @@ async function main() {
   const e118 = exportFile('서랑시-20260308-151443.cslmap'), s118 = saveFile('!w_nweg_21%002E2.crp');
   if (!e118 || !s118) skip('118011 pair'); else { const rr = await sim(s118, city(e118)); check(rr.ok && rr.v.verdict === 'match' && rr.unavailable.length === 0, `118011 pair: ${rr.ok ? rr.v.verdict + (rr.unavailable.length ? ', missing ' + rr.unavailable.join(', ') : '') : rr.code}`); }
   report();
+}
+
+/** Citizens' car trips from the save's PathManager (lane types Vehicle+Pedestrian, vehicle type Car): segment sequences.
+ *  These paths come from TM:PE's own pathfinder, which makes private cars obey lane arrows (CustomPathFind). */
+function carTripPaths(sd: SaveData): { segs: number[]; pos: [number, number][] }[] {
+  const sec = section(sd, 'PathManager')!; const s = sec.s;
+  const N = 262144, sim = s.eaU16(N - 1);
+  const units = new Map<number, { lt: number; vt: number; next: number; pos: [number, number][] }>();
+  for (let i = 1; i < N; i++) {
+    if (!sim[i - 1]) continue;
+    s.u8(); const lt = s.u8(), vt = s.u32(), pc = s.u8(), next = s.u24(); s.u32(); s.f32(); s.u8();
+    const pos: [number, number][] = []; for (let k = 0; k < pc; k++) { const seg = s.u16(); s.u8(); pos.push([seg, s.u8()]); }
+    units.set(i, { lt, vt, next, pos });
+  }
+  const isNext = new Set([...units.values()].map((u) => u.next));
+  const out: { segs: number[]; pos: [number, number][] }[] = [];
+  for (const [id, u] of units) {
+    if (isNext.has(id) || (u.lt & 3) !== 3 || !(u.vt & 1)) continue; // trip heads only
+    const pos: [number, number][] = []; const seen = new Set<number>();
+    for (let x: number | undefined = id; x && !seen.has(x); x = units.get(x)?.next) { seen.add(x); pos.push(...(units.get(x)?.pos ?? [])); }
+    const segs = pos.map((p) => p[0]);
+    out.push({ segs: segs.filter((v, k) => k === 0 || v !== segs[k - 1]), pos });
+  }
+  return out;
 }
 
 function readSd(f: string) { const b = new Uint8Array(readFileSync(f)); const e = readCrp(b).entries.find((x) => x.type === ASSET_DATA)!; return openSaveData(b.subarray(e.offset, e.offset + e.size)); }

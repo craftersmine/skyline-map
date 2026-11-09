@@ -3,7 +3,7 @@
 2026-11-09. Reference pair: 서랑시 export `서랑시-20261107-234707.cslmap` + save `!w_nweg_23%002E0%002E1.crp`.
 Cross-checked on four more matched pairs: 서랑시 (March, format 118011), 라스 크루즈, Quda City and 스프링데일.
 Scratch scripts are in `scratchpad/simtest` (`ow49.ts`, `ends.ts`, `kr.ts`, `phase2.ts`). Regression tests are in
-`npm run check:sim`. Nothing in this audit is committed or deployed.
+`npm run check:sim`. The fixes in sections 1–2 shipped in commit 534864f; section 6 records Phase 2.
 
 ## 1. The 49 reversed one-way roads
 
@@ -79,8 +79,8 @@ The router works per segment and direction; the game routes per lane. Where that
   changes nothing here. The game lets each car pick a lane.
 - **Restriction penalty:** TM:PE multiplies a lane's selection cost; the router multiplies the segment's travel
   cost by the same factor. The direction of the effect matches; the magnitudes are not comparable cost models.
-- **Not modelled:** lane arrows, lane connections, priority signs, timed lights, turn-on-red, parking AI,
-  "enter blocked junction".
+- **Not modelled:** priority signs, timed lights, turn-on-red, parking AI, "enter blocked junction". Lane arrows
+  and connections only as segment-level turn bans (section 6).
 - **U-turns:** decided only for segment ends whose node is matched. Pedestrian-street transitions are left
   undecided, because they depend on prefab vehicle categories. Without TM:PE, U-turns keep the router's own penalties.
 - **"No limit" lanes:** keep the export's limit, because vehicle top speeds aren't in the save.
@@ -156,3 +156,64 @@ Directions, reach and closures, so none of them can show a result computed under
 - reach and closure have no "rules off" switch of their own;
 - with Phase 1 live, routes in TM:PE cities now avoid U-turns at junctions. That is correct for these saves,
   but it is a visible behaviour change.
+
+## 6. Phase 2 as implemented: turn bans from lane arrows and connections
+
+`turnBans` in `src/sim/rules.ts`; the router forbids a banned turn except as a trip's first turn.
+
+**Rule.** At a node flagged Junction, a car arriving on A may continue onto B when one of A's car lanes arriving
+there allows it (`RoutingManager.RecalculateLaneEndRoutingData`, read as its backward search uses it):
+- a lane with outgoing road connections at that node: only its connections count (only while TM:PE's lane
+  connector is on);
+- otherwise its final arrows: TM:PE's custom arrows, else the game's own in `NetLane.m_flags`;
+- direction `d = CalculateArrowDirection(dir of B, dir of A)`, a float32 port. The turn is allowed if d is Right and
+  the lane has a Left arrow, d is Left and it has Right, or d is Forward and it has Forward or no arrows.
+
+**Classifier check** against the game's default arrows on lanes TM:PE never touched: 3,257/3,330 (97.8%) on 서랑시,
+810/829 on 라스 크루즈, 156/157 on Quda. Almost all mismatches are forward-only lanes where TM:PE calls a sharp
+bend Left. These are default lanes, which allow forward, so the classifier's error can't create a ban there.
+
+**Validated against the game's own routes.** The save's PathManager holds every active path. Citizen car trips are
+the units with lane types Vehicle+Pedestrian and vehicle type Car. Each step below was forced by that data:
+
+| Step | Bans | Car-trip turns against a ban |
+|---|---|---|
+| First version: car lanes = `Vehicle` + Car only | 99 | 95 |
+| Bus lanes count as arriving lanes. Private cars turn from bus lanes (TM:PE routes over every road lane and leaves bus lanes to vehicle restrictions) | 85 | 28 |
+| Turns sharper than 90° left undecided | 6 | 0 (one remaining case was a police car; emergency vehicles don't obey arrows) |
+
+The acute-turn decision is evidence-based but not explained. Two contradicted cases (11783→25914 at node 15902,
+28181→8782 at node 23387) have had their custom arrows since February 2041, so the paths aren't stale, and no reason
+was found in TM:PE's code. Leaving those turns undecided can only permit more, never forbid a legal move.
+
+**Left undecided (ban nothing):**
+- toll-booth nodes, which route lane by lane;
+- untouchable and beautification nodes, which TM:PE exempts from arrows;
+- connections onto lanes that can't be placed;
+- degenerate geometry (`None` / `Turn`);
+- TM:PE's highway rules, which rewrite highway arrows at run time;
+- left-hand traffic, until tested.
+
+**U-turn bans (Phase 1) checked the same way.** The save's car trips contain 87 mid-trip U-turns, and none is at a
+banned segment end. Three U-turns at a trip's first or last road do hit a ban: the game places the car on a lane next
+to the building there, which the router's point-to-point model doesn't need. Heavy vehicles and buses follow other
+U-turn rules (`CustomPathFind`: heavy vehicles only at dead ends); the router models private cars only.
+
+**Effect:**
+- 6 bans on the reference save;
+- 3 of 150 random drives take another way;
+- none becomes unreachable;
+- building the rules takes about 100 ms.
+
+**Known approximation in the router:** the first-turn exemption is kept per search state, and Dijkstra keeps only
+the cheapest arrival at each state. When a trip could start on two roads and the cheaper path onto road A comes
+through road B, A's exemption is lost. That can only make a route stricter, never break a rule, and needs a start
+snapped to two roads that meet at a banned turn.
+
+**Lane-dependent cases left out (Phase 4 material):**
+- a sequence that needs a particular lane, for example a connection into a lane that can't make the next turn;
+- a lane change that's too short to make;
+- choosing the lane at one junction for the next.
+
+The reference save has no connection leading onto a lane whose far end has custom arrows (section 4). The
+segment-level rule is therefore exact for it, but could over-permit in other cities.

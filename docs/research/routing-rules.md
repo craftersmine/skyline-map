@@ -1,8 +1,9 @@
 # Traffic rules from the save in routing: investigation
 
-2026-11-09. **Status: phase 1 implemented and audited** (docs/research/routing-audit.md corrects several semantics described below: TM:PE option switches, restriction aggression, U-turn defaults); phase 2 open.
+2026-11-09. **Status: phases 1 and 2 implemented** (docs/research/routing-audit.md corrects several semantics described below: TM:PE option switches, restriction aggression, U-turn defaults; its section 6 covers phase 2).
 Test pair: 서랑시 export `서랑시-20261107-234707.cslmap` + save `!w_nweg_23%002E0%002E1.crp` (match
-verdict). Measurements: scratchpad `simtest/rules.ts`. Nothing here is implemented yet.
+verdict). Measurements: scratchpad `simtest/rules.ts`. The sections below are the original investigation; what shipped is in
+`docs/sim-data.md`.
 
 ## Answer
 

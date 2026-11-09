@@ -796,7 +796,7 @@ export const KO: Record<string, string> = {
   "map layers": "지도 레이어",
   "This save file is damaged": "세이브 파일이 손상됐어요",
   "Its contents don't match the checksum the game wrote into it. Try the original file, or save again in the game.": "게임이 파일에 기록해 둔 체크섬과 내용이 맞지 않아요. 원본 파일로 다시 해 보거나, 게임에서 다시 저장해 주세요.",
-  "One-way directions, TM:PE speed limits, car restrictions and U-turn bans from your save": "세이브의 일방통행 방향, TM:PE 제한 속도, 차량 통행 제한, 유턴 금지",
+  "One-way directions, TM:PE speed limits, car restrictions, U-turn bans and lane-arrow turns from your save": "세이브의 일방통행 방향, TM:PE 제한 속도, 차량 통행 제한, 유턴 금지, 차선 화살표 회전 제한",
   "Traffic rules from my save": "내 세이브의 교통 규칙 적용",
   "Used for directions": "길찾기에 적용됨",
   "Directions, reach and closures now follow the traffic rules in your save: {list}.": "길찾기, 도달 범위, 통제 분석이 이제 세이브의 교통 규칙을 따라요: {list}.",
@@ -814,4 +814,6 @@ export const KO: Record<string, string> = {
   "{n} roads restricted for cars (used only if there is no other way)": "승용차 통행 제한 도로 {n}개(다른 길이 없을 때만 이용)",
   "{n} place where U-turns are not allowed": "유턴 금지 지점 {n}곳",
   "{n} places where U-turns are not allowed": "유턴 금지 지점 {n}곳",
+  "{n} turn ruled out by lane arrows or lane connections": "차선 화살표·차선 연결로 막힌 회전 {n}곳",
+  "{n} turns ruled out by lane arrows or lane connections": "차선 화살표·차선 연결로 막힌 회전 {n}곳",
 };

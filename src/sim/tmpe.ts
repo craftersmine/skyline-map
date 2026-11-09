@@ -34,6 +34,8 @@ export interface JunctionFlags {
  * TM:PE's built-in default, which we don't assume, so a too-short blob gives null.
  */
 export interface TmpeOptions {
+  /** byte 7: TM:PE highway rules (lane routing on highways ignores arrows); turn bans are skipped while on */
+  highwayRules: boolean;
   /** byte 13: U-turns allowed at junctions by default (JunctionRestrictionsManager.GetDefaultUturnAllowed) */
   allowUTurns: boolean;
   /** byte 20: lane speed limits and road-type defaults are applied (SpeedLimitManager.GetGameSpeedLimit) */
@@ -53,7 +55,7 @@ export function readTmpeOptions(blob: Uint8Array | undefined): TmpeOptions | nul
   const on = (i: number) => blob[i] !== 0;
   const ag = blob[35];
   if (ag > 3) return null; // not a value this TM:PE version writes: don't guess
-  return { allowUTurns: on(13), customSpeedLimits: on(20), vehicleRestrictions: on(21), laneConnector: on(22), junctionRestrictions: on(24), restrictionsAggression: ag as 0 | 1 | 2 | 3 };
+  return { highwayRules: on(7), allowUTurns: on(13), customSpeedLimits: on(20), vehicleRestrictions: on(21), laneConnector: on(22), junctionRestrictions: on(24), restrictionsAggression: ag as 0 | 1 | 2 | 3 };
 }
 
 export interface TmpeData {

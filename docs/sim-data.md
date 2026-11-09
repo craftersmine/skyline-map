@@ -106,6 +106,7 @@ no TM:PE rule is used.
 | TM:PE speed limit | per lane, else TM:PE's road-type default, else the prefab limit (`SpeedLimitManager`), on lanes TM:PE can customise | fastest car-lane limit per direction (the router's 85% town factor stays) |
 | TM:PE vehicle restriction | a direction whose every car lane bars passenger cars (`CustomPathFind.CanUseLane`) | Strict aggression: banned. Low/Medium/High: TM:PE's own cost factor ×10/×100/×1000 while searching, never in the shown time |
 | U-turns | TM:PE junction restrictions on: explicit setting, else TM:PE's default (dead ends and one-way-out nodes; junctions only with "allow U-turns"). Off: only dead ends / one-way-out nodes | U-turn back along the segment forbidden where the game forbids it |
+| Lane arrows and lane connections (TM:PE) | at a junction, a car arriving on road A may continue onto road B only if one of A's car lanes arriving there allows it: through its TM:PE lane connections if it has any, else through its final arrows (TM:PE custom, else the game's own in `NetLane.m_flags`), with TM:PE's left/forward/right classification ported from `CalculateArrowDirection` (`RoutingManager.RecalculateLaneEndRoutingData`) | that turn forbidden, except as a trip's first turn (TM:PE relaxes arrows on the start lane) |
 | TM:PE limits on transit pieces | the same limits for the vehicle type riding the piece (e.g. metro tracks held to 60 km/h) | transit ride times |
 
 **Not applied, with reasons:**
@@ -115,8 +116,13 @@ no TM:PE rule is used.
 - **"No limit" (TM:PE unlimited):** vehicles then drive at their own top speed, which isn't in the save, so the
   export's limit stays.
 - **Left-hand traffic:** one-way and per-direction rules are skipped until a left-hand save has been tested.
-- **Lane arrows, lane connections, priority signs, turn-on-red:** not modelled. Phase 2 is assessed in
-  docs/research/routing-audit.md.
+- **Lane arrows: only what holds for the whole road.** A turn is ruled out only when no arriving car lane allows it.
+  Sequences that need a particular lane (connected into a lane that can't make the next turn) are not modelled; see
+  docs/research/routing-audit.md, section 6.
+- **Arrow turns left undecided:** turns sharper than 90° (live game paths contradict the reading of TM:PE there),
+  toll-booth nodes, untouchable and beautification nodes, connections onto lanes that can't be placed, and saves with
+  TM:PE's highway rules on (they rewrite arrows on highways at run time).
+- **Priority signs, timed lights, turn-on-red:** they carry no timing data in the save.
 
 **Toggle:** Directions shows a "Traffic rules from my save" switch while rules are loaded. Switching it off, or
 removing the save, gives exactly the export-only routes; reach and closures always use the rules while a save
@@ -127,12 +133,16 @@ is loaded.
 - 98 roads with changed car limits;
 - 6 roads restricted for cars;
 - 7,206 segment ends where U-turns are forbidden;
+- 6 turns ruled out by lane arrows or lane connections;
 - 379 transit pieces;
 - metro ride time +12%;
 - one trip goes from 11 min via the toll expressway to 6 min on 서빛서랑대로.
 
 **Checks (`check:sim`, section 3b):**
 - no drive breaks a rule;
+- the game's own routes agree: of 3,704 citizen car trips stored in the save (239,076 turns), none makes a turn the
+  arrows rule out, and none of their 87 mid-trip U-turns is at a segment end where U-turns are banned;
+- turn bans never make a reachable trip unreachable;
 - the option switches are honoured;
 - reported times exclude penalties;
 - "rules off" and cleared rules reproduce the export-only drive, reach and transit results byte for byte;

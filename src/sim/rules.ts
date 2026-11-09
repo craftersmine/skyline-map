@@ -16,6 +16,7 @@ import { type SaveNet, segmentLanes } from './net';
 import type { TmpeData } from './tmpe';
 import { TMPE_UNLIMITED_KMH } from './tmpe';
 import { M } from './validate';
+import { detectTolls } from '../tolls';
 
 export interface SimRules {
   /** +1: traffic runs start→end, -1: end→start; matched one-way vehicle segments */
@@ -28,10 +29,12 @@ export interface SimRules {
   restrictFactor: number | null;
   /** segment ends where the game forbids a U-turn back along the same segment: segment id + node id */
   uturnBan: { seg: number; node: number }[];
+  /** turns TM:PE's lane arrows and lane connections forbid for cars: from segment, at node, onto segment (U-turns are uturnBan) */
+  turnBan: { from: number; node: number; to: number }[];
   /** per segment, the fastest limit (km/h) by export lane vehicle type token ('Car', 'Metro'…) where TM:PE changes it */
   trackLimit: Map<number, Map<string, number>>;
   /** counts and context for the page */
-  summary: { oneway: number; speed: number; carRestrict: number; restrictBan: boolean; uturnBan: number; track: number; leftHand: boolean; tmpe: boolean };
+  summary: { oneway: number; speed: number; carRestrict: number; restrictBan: boolean; uturnBan: number; turnBan: number; track: number; leftHand: boolean; tmpe: boolean };
 }
 
 const VEH = /Car|Train|Metro|Tram|Monorail/;
@@ -128,10 +131,11 @@ export function buildRules(city: CityData, net: SaveNet, seg: Uint8Array, tmpe: 
       if (allowed === false) uturnBan.push({ seg: s.id, node: n });
     }
   }
+  const turnBan = opt && !opt.highwayRules && !leftHand ? turnBans(city, net, seg, tmpe!, laneDir, fwd, back) : [];
   const restrictFactor = opt ? (opt.restrictionsAggression === 3 ? null : PENALTY[opt.restrictionsAggression]) : null;
   return {
-    oneway, speed, carRestrict, restrictFactor, uturnBan, trackLimit,
-    summary: { oneway: oneway.size, speed: speed.size, carRestrict: carRestrict.size, restrictBan: restrictFactor === null, uturnBan: uturnBan.length, track: trackLimit.size, leftHand, tmpe: !!opt },
+    oneway, speed, carRestrict, restrictFactor, uturnBan, turnBan, trackLimit,
+    summary: { oneway: oneway.size, speed: speed.size, carRestrict: carRestrict.size, restrictBan: restrictFactor === null, uturnBan: uturnBan.length, turnBan: turnBan.length, track: trackLimit.size, leftHand, tmpe: !!opt },
   };
 }
 
@@ -157,4 +161,111 @@ export function uturnAllowed(seg: number, n: number, nodeService: string, flags:
   if (flags2 & N2_PED_TRANSITION) return null; // depends on the other segments' vehicle categories (prefab data)
   if (!configurable) return false;
   return opt.allowUTurns && (flags & (N_JUNCTION | N_TRANSITION)) !== 0;
+}
+
+// ---------------------------------------------------------------- lane arrows and lane connections
+export const enum Arrow { None = 0, Left = 1, Forward = 2, Right = 3, Turn = 4 }
+const L_FWD = 0x10, L_LEFT = 0x20, L_RIGHT = 0x40;
+const N_UNTOUCHABLE = 0x200;
+
+/** TM:PE ExtSegmentEndManager.CalculateArrowDirection: where `target` leaves the node, seen from `source` (both are
+ *  segment directions pointing away from the node: m_startDirection / m_endDirection) */
+export function arrowDirection(sx: number, sz: number, tx: number, tz: number): Arrow {
+  const f = Math.fround;
+  const norm = (x: number, z: number): [number, number] => { const m = f(Math.sqrt(f(f(x * x) + f(z * z)))); return m > 1e-5 ? [f(x / m), f(z / m)] : [0, 0]; };
+  [sx, sz] = norm(sx, sz); [tx, tz] = norm(tx, tz);
+  const y = f(f(sz * tx) - f(sx * tz)); // Vector3.Cross(source, target).y
+  if (y >= 0.5) return Arrow.Left;
+  if (y <= -0.5) return Arrow.Right;
+  if (f(f(sx * tx) + f(sz * tz)) > 0) return y > 0 ? Arrow.Left : y < 0 ? Arrow.Right : Arrow.Turn;
+  return Arrow.Forward;
+}
+
+/**
+ * A car arriving on segment A at a junction may continue onto segment B when at least one of A's car lanes arriving
+ * there allows it (TM:PE RoutingManager.RecalculateLaneEndRoutingData, read the way its backward search uses it):
+ *  - a lane with outgoing lane connections at that node: only its connections count;
+ *  - otherwise its final lane arrows (TM:PE custom, else the game's own, stored in NetLane.m_flags), matched against
+ *    TM:PE's direction of A seen from B (B on the right ⇔ the lane needs a Left arrow…); a lane without arrows goes forward.
+ * TM:PE's relaxed transitions that ignore arrows are not used by spawned private cars except on their starting lane;
+ * the router exempts a trip's first turn. Undecidable cases ban nothing.
+ */
+function turnBans(city: CityData, net: SaveNet, seg: Uint8Array, tmpe: TmpeData, laneDir: (id: number, l: CLane) => string, fwd: (d: string) => boolean, back: (d: string) => boolean) {
+  const opt = tmpe.options!;
+  const byId = new Map(city.segs.map((s) => [s.id, s]));
+  const lanesOf = new Map<number, number[]>();
+  const laneSeg = new Map<number, number>();
+  for (const s of city.segs) {
+    if (seg[s.id] !== M.Verified) continue;
+    const st = city.segTypes.get(s.name), chain = segmentLanes(net, s.id);
+    if (!st || chain.length !== st.lanes.length) continue;
+    lanesOf.set(s.id, chain); for (const l of chain) laneSeg.set(l, s.id);
+  }
+  const custom = new Map(tmpe.laneArrows.map((a) => [a.lane, (a.forward ? L_FWD : 0) | (a.left ? L_LEFT : 0) | (a.right ? L_RIGHT : 0)]));
+  // outgoing road connections per lane end: lane + ':' + node → target lanes
+  const conn = new Map<string, number[]>();
+  if (opt.laneConnector) for (const c of tmpe.laneConnections) {
+    if (c.group !== 1 && c.group !== 3) continue; // road connections only
+    // keyed by the node the connection sits at: the source lane's end (sourceStartNode); a bidirectional connection
+    // also lets the target lane continue into the source lane at that same node
+    const sId = laneSeg.get(c.source), s = sId !== undefined ? byId.get(sId) : undefined;
+    const add = (from: number, node: number, to: number) => { const k = from + ':' + node; (conn.get(k) ?? conn.set(k, []).get(k)!).push(to); };
+    if (!s) {
+      // source lane not placed, so the shared node is unknown: a bidirectional connection leaves the target lane
+      // undecided at both of its ends (-1 is a target that never resolves)
+      const tId = laneSeg.get(c.target), t = tId !== undefined ? byId.get(tId) : undefined;
+      if (c.bidirectional && t) { add(c.target, t.sn, -1); add(c.target, t.en, -1); }
+      continue;
+    }
+    const node = c.sourceStartNode ? s.sn : s.en;
+    add(c.source, node, c.target);
+    if (c.bidirectional) add(c.target, node, c.source);
+  }
+  // toll booth nodes route lane by lane (RoutingManager flag7): left alone
+  const tollNodes = new Set<number>();
+  try { const tl = detectTolls(city); for (const id of [...tl.gateOf.keys(), ...tl.boothOf.keys()]) { const s = byId.get(id); if (s) { tollNodes.add(s.sn); tollNodes.add(s.en); } } } catch { /* no tolls */ }
+  const at = new Map<number, number[]>();
+  for (const s of city.segs) if (!s.path) for (const n of [s.sn, s.en]) (at.get(n) ?? at.set(n, []).get(n)!).push(s.id);
+  const dirAt = (id: number, n: number): [number, number] => { const a = net.segStart[id] === n ? net.segStartDir : net.segEndDir; return [a[id * 3], a[id * 3 + 2]]; };
+  // lanes a car may be in at a junction: ordinary car lanes and bus lanes. Live paths in the reference save show private
+  // cars turning from bus lanes (the turn only a bus lane's arrows allow), as TM:PE routes over every road lane
+  // (MatchesRoutedRoad) and leaves bus lanes to vehicle restrictions.
+  const carLanes = (id: number) => (city.segTypes.get(byId.get(id)!.name)?.lanes ?? []).map((l, i) => [l, i] as const).filter(([l]) => (l.type === 'Vehicle' || l.type === 'TransportVehicle') && tokens(l.vType).includes('Car'));
+  const arrives = (id: number, n: number, l: CLane) => { const d = laneDir(id, l), s = byId.get(id)!; return (n === s.en && fwd(d)) || (n === s.sn && back(d)); };
+  const leaves = (id: number, n: number, l: CLane) => { const d = laneDir(id, l), s = byId.get(id)!; return (n === s.sn && fwd(d)) || (n === s.en && back(d)); };
+
+  const out: { from: number; node: number; to: number }[] = [];
+  for (const [n, ids] of at) {
+    const flags = net.nodeFlags[n];
+    if (!(flags & N_JUNCTION) || (flags & N_UNTOUCHABLE) || city.nodes.get(n)?.srv === 'Beautification' || tollNodes.has(n)) continue;
+    for (const a of ids) {
+      const chain = lanesOf.get(a);
+      if (!chain) continue; // unmatched, or lanes we can't map
+      const inLanes = carLanes(a).filter(([l]) => arrives(a, n, l));
+      if (!inLanes.length) continue;
+      for (const b of ids) {
+        if (b === a || seg[b] !== M.Verified || !carLanes(b).some(([l]) => leaves(b, n, l))) continue;
+        const [bx, bz] = dirAt(b, n), [ax, az] = dirAt(a, n);
+        const d = arrowDirection(bx, bz, ax, az); // direction of A seen from B, as TM:PE evaluates it
+        if (d === Arrow.None || d === Arrow.Turn) continue; // degenerate geometry: undecided
+        // turns sharper than 90° (both roads leave the node on the same side): in the reference save live car paths
+        // make such turns against what this reading of TM:PE predicts, for a reason not found in its code: undecided
+        if (ax * bx + az * bz > 0) continue;
+        let allowed = false, unknown = false;
+        for (const [, i] of inLanes) {
+          const lane = chain[i];
+          const targets = conn.get(lane + ':' + n);
+          if (targets) {
+            if (targets.some((t) => laneSeg.get(t) === undefined)) unknown = true;
+            if (targets.some((t) => laneSeg.get(t) === b)) allowed = true;
+            continue;
+          }
+          const ar = custom.get(lane) ?? (net.laneFlags[lane] & (L_FWD | L_LEFT | L_RIGHT));
+          if ((d === Arrow.Right && ar & L_LEFT) || (d === Arrow.Left && ar & L_RIGHT) || (d === Arrow.Forward && (ar & L_FWD || !ar))) allowed = true;
+        }
+        if (!allowed && !unknown) out.push({ from: a, node: n, to: b });
+      }
+    }
+  }
+  return out;
 }

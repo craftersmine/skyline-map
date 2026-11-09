@@ -547,10 +547,12 @@ export class Router {
     return d;
   }
   /** Seconds lost at a junction: waiting at crossroads, and turning (right < left < U-turn). */
-  private turnCost(inE: Edge, inFwd: boolean, outE: Edge, outFwd: boolean, v: number) {
+  /** `first`: the turn out of a trip's first road, where TM:PE relaxes lane arrows (CustomPathFind start lanes) */
+  private turnCost(inE: Edge, inFwd: boolean, outE: Edge, outFwd: boolean, v: number, first = false) {
     const deg = this.driveDegree(v);
     const uturn = inE === outE;
     if (uturn && this.uturnBan.size && this.uturnBan.has(inE.id + ':' + v)) return Infinity; // a save's rule: no U-turn here
+    if (!uturn && !first && this.turnBan.get(v)?.has(inE.id * 65536 + outE.id)) return Infinity; // a save's lane arrows / connections
     if (deg <= 2) return uturn ? (deg === 1 ? 25 : 600) : 0;
     const arrive = (inFwd ? inE.hB : inE.hA) + Math.PI, depart = outFwd ? outE.hA : outE.hB;
     let d = ((depart - arrive) * 180) / Math.PI;
@@ -669,7 +671,7 @@ export class Router {
         const e = this.edges[ei];
         for (const fwd of [true, false]) {
           if ((fwd ? e.a : e.b) !== v || !this.driveOk(e, fwd)) continue;
-          const ns = 2 * ei + (fwd ? 0 : 1), turn = this.turnCost(inE, inFwd, e, fwd, v);
+          const ns = 2 * ei + (fwd ? 0 : 1), turn = this.turnCost(inE, inFwd, e, fwd, v, prev[st] === -1);
           for (const t of targets.get(ei) ?? []) {
             const g = d + turn + part(ei, fwd, arrive(ns, t)) + t.extra;
             if (g < best) { best = g; goal = { st: ns, from: st, t }; }
@@ -689,14 +691,14 @@ export class Router {
   }
   /** Travel time of a path that starts and ends part-way along its first and last roads. */
   private driveTimeOn(path: { e: number; fwd: boolean }[], s: DriveHit, t: DriveHit) {
-    const avoid = this.avoidTolls; this.avoidTolls = false;
+    const avoid = this.avoidTolls; this.avoidTolls = false; this.timing = true; // reported time: no search-only penalties
     try {
       const c = (p: { e: number; fwd: boolean }) => this.driveCost(this.edges[p.e], p.fwd);
       const first = path[0], last = path[path.length - 1];
       if (path.length === 1) return c(first) * Math.abs(t.frac - s.frac);
       const skipped = (1 - (first.fwd ? 1 - s.frac : s.frac)) * c(first) + (1 - (last.fwd ? t.frac : 1 - t.frac)) * c(last);
       return this.driveTimeRaw(path) - skipped;
-    } finally { this.avoidTolls = avoid; }
+    } finally { this.avoidTolls = avoid; this.timing = false; }
   }
   /** Drawn pieces of a drive path joined part-way along its first and last roads. */
   private driveParts(path: { e: number; fwd: boolean }[], s: DriveHit, t: DriveHit): { ed: Edge; pts: XY[] }[] {
@@ -766,7 +768,7 @@ export class Router {
         for (const fwd of [true, false]) {
           if ((fwd ? e.a : e.b) !== v || !this.driveOk(e, fwd)) continue;
           const ns = 2 * ei + (fwd ? 0 : 1);
-          const nd = d + this.turnCost(inE, inFwd, e, fwd, v) + this.driveCost(e, fwd) * (penalty.get(ei) ?? 1);
+          const nd = d + this.turnCost(inE, inFwd, e, fwd, v, prev[st] === -1) + this.driveCost(e, fwd) * (penalty.get(ei) ?? 1);
           if (nd < dist[ns]) { dist[ns] = nd; prev[ns] = st; h.push(nd, ns); }
         }
       }
@@ -787,7 +789,7 @@ export class Router {
     path.forEach((p, i) => {
       const e = this.edges[p.e];
       t += this.driveCost(e, p.fwd);
-      if (i > 0) { const q = path[i - 1]; t += this.turnCost(this.edges[q.e], q.fwd, e, p.fwd, q.fwd ? this.edges[q.e].b : this.edges[q.e].a); }
+      if (i > 0) { const q = path[i - 1]; t += this.turnCost(this.edges[q.e], q.fwd, e, p.fwd, q.fwd ? this.edges[q.e].b : this.edges[q.e].a, i === 1); }
     });
     return t;
   }
@@ -981,6 +983,9 @@ export class Router {
   private hopEdits: { h: Hop; base: number; rule: number }[] = [];
   private uturnRule = new Set<string>();
   private uturnBan = new Set<string>();
+  /** turns a save's lane arrows / lane connections forbid: node index → in segment id * 65536 + out segment id */
+  private turnRule = new Map<number, Set<number>>();
+  private turnBan = new Map<number, Set<number>>();
   private rulesOn = false;
   /** TM:PE vehicle restrictions: banned (Strict) or a path-cost factor */
   private restrictBan = true;
@@ -1028,12 +1033,13 @@ export class Router {
       }
     }
     for (const u of r.uturnBan) { const v = this.nodeIdx.get(u.node); if (v !== undefined) this.uturnRule.add(u.seg + ':' + v); }
+    for (const b of r.turnBan) { const v = this.nodeIdx.get(b.node); if (v !== undefined) (this.turnRule.get(v) ?? this.turnRule.set(v, new Set()).get(v)!).add(b.from * 65536 + b.to); }
     this.restrictRule = r.restrictFactor;
     this.setRules(true);
   }
   clearRules() {
     this.setRules(false);
-    this.ruleEdits = []; this.hopEdits = []; this.uturnRule = new Set(); this.restrictRule = null;
+    this.ruleEdits = []; this.hopEdits = []; this.uturnRule = new Set(); this.turnRule = new Map(); this.restrictRule = null;
   }
   /** what the applied rules changed, for the page */
   rulesSummary() { return { edges: this.ruleEdits.length, hops: this.hopEdits.length, uturns: this.uturnRule.size }; }
@@ -1042,6 +1048,7 @@ export class Router {
     for (const x of this.ruleEdits) Object.assign(x.e, on ? x.rule : x.base);
     for (const x of this.hopEdits) x.h.time = on ? x.rule : x.base;
     this.uturnBan = on ? this.uturnRule : new Set();
+    this.turnBan = on ? this.turnRule : new Map();
     this.restrictBan = !on || this.restrictRule === null; this.restrictFactor = on && this.restrictRule !== null ? this.restrictRule : 1;
     this.rulesOn = on;
     // access may have changed: rebuild components and junction degrees lazily
@@ -1099,7 +1106,7 @@ export class Router {
           const e = this.edges[ei];
           for (const fwd of [true, false]) {
             if ((fwd ? e.a : e.b) !== v || !this.driveOk(e, fwd)) continue;
-            const ns = 2 * ei + (fwd ? 0 : 1), nd = d + this.turnCost(inE, inFwd, e, fwd, v) + this.driveCost(e, fwd);
+            const ns = 2 * ei + (fwd ? 0 : 1), nd = d + this.turnCost(inE, inFwd, e, fwd, v, prev[st] === -1) + this.driveCost(e, fwd);
             if (nd < dist[ns] && nd <= max) { dist[ns] = nd; prev[ns] = st; h.push(nd, ns); }
           }
         }
@@ -1107,7 +1114,8 @@ export class Router {
       if (end < 0) return null;
       const chain: number[] = [];
       for (let st = end; st !== -1; st = prev[st]) chain.unshift(st);
-      return this.pathOut(chain.map((st) => ({ e: st >> 1, fwd: !(st & 1) })), dist[end]);
+      const path = chain.map((st) => ({ e: st >> 1, fwd: !(st & 1) }));
+      return this.pathOut(path, this.driveTime(path)); // the search cost can include TM:PE's restriction factor
     }
     const N = this.pos.length, dist = new Float64Array(N).fill(Infinity), via = new Int32Array(N).fill(-1);
     dist[a] = 0; h.push(0, a);
@@ -1228,11 +1236,15 @@ export class Router {
       const h = new Heap();
       if (mode === 'drive') {
         // edge-direction states, like driveSearch, so one-ways and turn costs apply
-        const E = this.edges.length, dist = new Float64Array(2 * E).fill(Infinity);
+        const E = this.edges.length, dist = new Float64Array(2 * E).fill(Infinity), seed = new Uint8Array(2 * E); // seed: a trip's first road
         // a car can only stop (or set off) where an ordinary road meets the node, not on a motorway or ramp
         const stopOk = (v: number) => this.adj[v].some((ei) => this.allowed(this.edges[ei], 'drive') && !HIGHWAY.has(this.edges[ei].cls));
-        const near = this.nearby(from, 'drive', 16), ordinary = near.filter((x) => stopOk(x.node));
-        for (const { node: s } of (ordinary.length ? ordinary : near).slice(0, 8)) {
+        // same order of preference as Directions (driveHits): an ordinary road in reach, then one up to 3 km out,
+        // and only then a motorway node
+        const near = this.nearby(from, 'drive', 16);
+        let seeds = near.filter((x) => stopOk(x.node));
+        if (!seeds.length) seeds = this.nearby(from, 'drive', Infinity, 3000).filter((x) => stopOk(x.node));
+        for (const { node: s } of (seeds.length ? seeds : near).slice(0, 8)) {
           const extra = Math.hypot(this.pos[s][0] - from[0], this.pos[s][1] - from[1]) / 3; // drive-up from the point
           if (extra < out[s]) out[s] = extra;
           for (const ei of this.adj[s]) {
@@ -1240,7 +1252,7 @@ export class Router {
             for (const fwd of [true, false]) {
               if ((fwd ? e.a : e.b) !== s || !this.driveOk(e, fwd)) continue;
               const st = 2 * ei + (fwd ? 0 : 1), c = extra + this.driveCost(e, fwd);
-              if (c < dist[st]) { dist[st] = c; h.push(c, st); }
+              if (c < dist[st]) { dist[st] = c; seed[st] = 1; h.push(c, st); }
             }
           }
         }
@@ -1253,8 +1265,8 @@ export class Router {
             const e = this.edges[ei];
             for (const fwd of [true, false]) {
               if ((fwd ? e.a : e.b) !== v || !this.driveOk(e, fwd)) continue;
-              const ns = 2 * ei + (fwd ? 0 : 1), nd = d + this.turnCost(inE, inFwd, e, fwd, v) + this.driveCost(e, fwd);
-              if (nd < dist[ns] && nd <= max) { dist[ns] = nd; h.push(nd, ns); }
+              const ns = 2 * ei + (fwd ? 0 : 1), nd = d + this.turnCost(inE, inFwd, e, fwd, v, seed[st] === 1) + this.driveCost(e, fwd);
+              if (nd < dist[ns] && nd <= max) { dist[ns] = nd; seed[ns] = 0; h.push(nd, ns); }
             }
           }
         }

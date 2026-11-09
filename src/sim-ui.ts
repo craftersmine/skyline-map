@@ -268,6 +268,7 @@ export function createSim(map: MLMap, deps: { worker: Worker; city: () => BuiltC
       r.speed ? tn(r.speed, '{n} road with a TM:PE speed limit', '{n} roads with TM:PE speed limits') : '',
       r.carRestrict ? (r.restrictBan ? tn(r.carRestrict, '{n} road closed to cars in a direction', '{n} roads closed to cars in a direction') : tn(r.carRestrict, '{n} road restricted for cars (used only if there is no other way)', '{n} roads restricted for cars (used only if there is no other way)')) : '',
       r.uturnBan ? tn(r.uturnBan, '{n} place where U-turns are not allowed', '{n} places where U-turns are not allowed') : '',
+      r.turnBan ? tn(r.turnBan, '{n} turn ruled out by lane arrows or lane connections', '{n} turns ruled out by lane arrows or lane connections') : '',
       r.track ? tn(r.track, '{n} track or road with a TM:PE limit for transit', '{n} tracks or roads with TM:PE limits for transit') : '',
     ].filter(Boolean);
     if (!parts.length) return '';
