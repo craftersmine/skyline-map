@@ -939,6 +939,105 @@ export class Router {
     return { mode: 'transit', dist: distSum, time: timeSum, via: legs.filter((l) => l.line).map((l) => l.line!.name).join(' → '), legs };
   }
 
+  /** Node positions (game metres), indexed like the times from `reachTimes`. */
+  nodePositions(): XY[] { return this.pos; }
+
+  /**
+   * Seconds from `from` to every network node by `mode`, up to `max` (Infinity beyond). Same costs as
+   * Directions: driving obeys one-ways and pays for turns; transit includes the estimated wait at each
+   * boarding but no transfer preference penalty, since this is about real time.
+   */
+  reachTimes(from: XY, mode: Mode, max: number): Float64Array {
+    const N = this.pos.length;
+    const out = new Float64Array(N).fill(Infinity);
+    return this.withEnds(mode, [from], () => {
+      const h = new Heap();
+      if (mode === 'drive') {
+        // edge-direction states, like driveSearch, so one-ways and turn costs apply
+        const E = this.edges.length, dist = new Float64Array(2 * E).fill(Infinity);
+        // a car can only stop (or set off) where an ordinary road meets the node, not on a motorway or ramp
+        const stopOk = (v: number) => this.adj[v].some((ei) => this.allowed(this.edges[ei], 'drive') && !HIGHWAY.has(this.edges[ei].cls));
+        const near = this.nearby(from, 'drive', 16), ordinary = near.filter((x) => stopOk(x.node));
+        for (const { node: s } of (ordinary.length ? ordinary : near).slice(0, 8)) {
+          const extra = Math.hypot(this.pos[s][0] - from[0], this.pos[s][1] - from[1]) / 3; // drive-up from the point
+          if (extra < out[s]) out[s] = extra;
+          for (const ei of this.adj[s]) {
+            const e = this.edges[ei];
+            for (const fwd of [true, false]) {
+              if ((fwd ? e.a : e.b) !== s || !this.driveOk(e, fwd)) continue;
+              const st = 2 * ei + (fwd ? 0 : 1), c = extra + this.driveCost(e, fwd);
+              if (c < dist[st]) { dist[st] = c; h.push(c, st); }
+            }
+          }
+        }
+        for (let top = h.pop(); top; top = h.pop()) {
+          const [d, st] = top;
+          if (d > dist[st] || d > max) continue;
+          const inE = this.edges[st >> 1], inFwd = !(st & 1), v = inFwd ? inE.b : inE.a;
+          if (d < out[v]) out[v] = d;
+          for (const ei of this.adj[v]) {
+            const e = this.edges[ei];
+            for (const fwd of [true, false]) {
+              if ((fwd ? e.a : e.b) !== v || !this.driveOk(e, fwd)) continue;
+              const ns = 2 * ei + (fwd ? 0 : 1), nd = d + this.turnCost(inE, inFwd, e, fwd, v) + this.driveCost(e, fwd);
+              if (nd < dist[ns] && nd <= max) { dist[ns] = nd; h.push(nd, ns); }
+            }
+          }
+        }
+        for (let v = 0; v < N; v++) if (out[v] < Infinity && !stopOk(v)) out[v] = Infinity;
+        return out;
+      }
+      // walking-type searches start where the point joins the path network, plus the walk to it
+      const S = this.joins(from, mode === 'bike' ? 'bike' : 'walk');
+      const d0 = Math.min(...S.map((j) => j.snap?.d ?? 0), Infinity);
+      const access = Number.isFinite(d0) ? d0 / WALK : 0;
+      if (mode !== 'transit') {
+        for (const { node, extra } of S) if (extra + access < out[node]) { out[node] = extra + access; h.push(out[node], node); }
+        for (let top = h.pop(); top; top = h.pop()) {
+          const [d, u] = top;
+          if (d > out[u]) continue;
+          for (const ei of this.adj[u]) {
+            const e = this.edges[ei];
+            if (!this.allowed(e, mode)) continue;
+            const v = e.a === u ? e.b : e.a, nd = d + this.cost(e, mode);
+            if (nd < out[v] && nd <= max) { out[v] = nd; h.push(nd, v); }
+          }
+        }
+        return out;
+      }
+      // transit: walk nodes [0, N) and ride states, as in transitSearch
+      const offs: number[] = []; let total = N;
+      for (const l of this.lines) { offs.push(total); total += l.stops.length; }
+      const boardAt = new Map<number, { st: number; extra: number; li: number }[]>();
+      const alight: Join[][] = new Array(total - N);
+      this.lines.forEach((l, li) => l.stops.forEach((sid, k) => {
+        const ws = this.stopWalk.get(sid);
+        if (!ws) return;
+        const st = offs[li] + k;
+        alight[st - N] = ws;
+        for (const w of ws) { const arr = boardAt.get(w.node) ?? []; arr.push({ st, extra: w.extra, li }); boardAt.set(w.node, arr); }
+      }));
+      const lineOf = (st: number) => { let lo = 0, hi = offs.length - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (offs[m] <= st) lo = m; else hi = m - 1; } return lo; };
+      const dist = new Float64Array(total).fill(Infinity);
+      const relax = (v: number, nd: number) => { if (nd < dist[v] && nd <= max) { dist[v] = nd; h.push(nd, v); } };
+      for (const { node, extra } of S) relax(node, extra + access);
+      for (let top = h.pop(); top; top = h.pop()) {
+        const [d, u] = top;
+        if (d > dist[u]) continue;
+        if (u < N) {
+          for (const ei of this.adj[u]) { const e = this.edges[ei]; if (this.allowed(e, 'walk')) relax(e.a === u ? e.b : e.a, d + e.len / WALK); }
+          for (const { st, extra, li } of boardAt.get(u) ?? []) relax(st, d + extra + modeParams(this.lines[li].mode).wait);
+        } else {
+          const li = lineOf(u), l = this.lines[li], k = u - offs[li];
+          relax(offs[li] + ((k + 1) % l.stops.length), d + l.hops[k].time + modeParams(l.mode).dwell);
+          for (const w of alight[u - N] ?? []) relax(w.node, d + w.extra);
+        }
+      }
+      out.set(dist.subarray(0, N));
+      return out;
+    });
+  }
+
   /** The player's station name, or a description of where the stop is (never an invented name). */
   private stopLabel(sid: number): string {
     const n = this.stopNames.get(sid);

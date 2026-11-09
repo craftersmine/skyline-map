@@ -11,6 +11,8 @@ import type { BuiltCity, SearchEntry, FC } from './build';
 import { fromLngLat, toLngLat } from './geo';
 import { createDirections } from './directions';
 import { createMeasure } from './measure';
+import { createReach } from './reach-ui';
+import { createTimelapse } from './timelapse';
 import { createSchematic } from './schematic-view';
 import { createContextStore, createContextEditor, moneyField, parseMoney, describeRule } from './context-ui';
 import { bottomSheet, isPhone } from './sheet';
@@ -80,6 +82,8 @@ function applyStyle() {
   currentStyle = next;
   extruded = null; updateExtrusion();
   drawGlow();
+  reach.refresh();
+  timelapse.refresh();
   document.documentElement.dataset.theme = state.mode === 'night' ? 'dark' : 'light';
   if ((state.opts.contours || state.mode === 'terrain') && state.city && !state.contoursLoaded) requestContours();
   syncUi();
@@ -96,6 +100,7 @@ worker.onmessage = (e) => {
   else if (m.type === 'city') showCity(m.city as BuiltCity);
   else if (m.type === 'route') { if (!schem.onRoute(m)) dir.onResult(m); }
   else if (m.type === 'schematic') schem.onMessage(m);
+  else if (m.type === 'reach') reach.onResult(m);
   else if (m.type === 'contours') { (map.getSource('contours') as GeoJSONSource).setData(m.fc); state.contoursLoaded = true; }
 };
 function requestContours() { state.contoursLoaded = true; worker.postMessage({ type: 'contours', interval: 10, major: 50 }); }
@@ -118,6 +123,8 @@ async function openLocal(file: string) {
 }
 
 function showCity(city: BuiltCity) {
+  if (reach.isActive()) reach.close();
+  timelapse.reset();
   state.city = city;
   state.contoursLoaded = false;
   setDem(city.dem);
@@ -446,6 +453,7 @@ map.on('click', (e) => {
   if (!state.city) return;
   hideCtx();
   if (measure.isActive()) { measure.click(e); return; }
+  if (reach.isActive()) { reach.click([e.lngLat.lng, e.lngLat.lat]); return; }
   if (dir.isOpen()) { dir.mapClick([e.lngLat.lng, e.lngLat.lat], placeLabelAt(e.point)); return; }
   const r = 6;
   const feats = map.queryRenderedFeatures([[e.point.x - r, e.point.y - r], [e.point.x + r, e.point.y + r]], { layers: interactive() });
@@ -457,7 +465,7 @@ map.on('click', (e) => {
 });
 let hoverRaf = 0;
 map.on('mousemove', (e) => {
-  if (!state.city || hoverRaf || measure.isActive()) return;
+  if (!state.city || hoverRaf || measure.isActive() || reach.isActive()) return;
   hoverRaf = requestAnimationFrame(() => {
     hoverRaf = 0;
     const hit = map.queryRenderedFeatures(e.point, { layers: interactive().filter((l) => l !== 'lots' && l !== 'water') }).length > 0;
@@ -496,17 +504,31 @@ const dir = createDirections({
   map, worker, city: () => state.city,
   pricing, editPricing: (tab, focus) => pricingEd.open(tab, focus),
   showOnSchematic: (route) => schem.open({ route }),
-  onOpen: () => { closePanel(); $('topbar').hidden = true; document.body.classList.add('dir-open'); },
+  onOpen: () => { closePanel(); if (reach.isActive()) reach.close(); $('topbar').hidden = true; document.body.classList.add('dir-open'); },
   onClose: () => { $('topbar').hidden = false; document.body.classList.remove('dir-open'); },
 });
 $('dirBtn').onclick = () => dir.open();
 $('dirFab').onclick = () => dir.open();
 
 const measure = createMeasure(map, {
-  onOpen: () => { closePanel(); if (dir.isOpen()) dir.close(); $('measureBtn').classList.add('on'); },
+  onOpen: () => { closePanel(); if (dir.isOpen()) dir.close(); if (reach.isActive()) reach.close(); $('measureBtn').classList.add('on'); },
   onClose: () => $('measureBtn').classList.remove('on'),
 });
 $('measureBtn').onclick = () => measure.toggle();
+
+const reach = createReach(map, {
+  worker,
+  land: () => state.city?.districtField ?? null,
+  night: () => state.mode === 'night',
+  onOpen: () => { closeDrawer(); closePanel(); if (dir.isOpen()) dir.close(); if (measure.isActive()) measure.close(); if (timelapse.isActive()) timelapse.close(); },
+});
+$('reachBtn').onclick = () => { closeDrawer(); const c = map.getCenter(); reach.open([c.lng, c.lat]); };
+
+const timelapse = createTimelapse(map, {
+  worker, city: () => state.city, currentFile: () => state.currentFile, toast,
+  onOpen: () => { closeDrawer(); closePanel(); if (reach.isActive()) reach.close(); if (measure.isActive()) measure.close(); },
+});
+$('timelapseBtn').onclick = () => timelapse.open();
 
 /** Name of whatever labelled thing is under a screen point, else a generic pin label. */
 function placeLabelAt(pt: { x: number; y: number }): string {
@@ -529,10 +551,10 @@ map.on('contextmenu', (e) => {
   ctxPlace = { label: placeLabelAt(e.point), ll: [e.lngLat.lng, e.lngLat.lat] };
   const [x, z] = fromLngLat(e.lngLat.lng, e.lngLat.lat);
   ctx.innerHTML = `<div class="ctx-title">${esc(ctxPlace.label === t('Dropped pin') ? `x ${Math.round(x)}, z ${Math.round(z)}` : ctxPlace.label)}</div>
-    <button data-c="from">${t('Directions from here')}</button><button data-c="to">${t('Directions to here')}</button><button data-c="measure">${t('Measure distance')}</button>`;
+    <button data-c="from">${t('Directions from here')}</button><button data-c="to">${t('Directions to here')}</button><button data-c="measure">${t('Measure distance')}</button><button data-c="reach">${t('How far can I get from here?')}</button>`;
   const r = map.getContainer().getBoundingClientRect();
   ctx.style.left = Math.min(e.point.x + r.left, innerWidth - 230) + 'px';
-  ctx.style.top = Math.min(e.point.y + r.top, innerHeight - 130) + 'px';
+  ctx.style.top = Math.min(e.point.y + r.top, innerHeight - 170) + 'px';
   ctx.hidden = false;
 });
 ctx.addEventListener('click', (e) => {
@@ -540,6 +562,7 @@ ctx.addEventListener('click', (e) => {
   if (!c || !ctxPlace) return;
   hideCtx();
   if (c === 'measure') return measure.open(ctxPlace.ll);
+  if (c === 'reach') return reach.open(ctxPlace.ll);
   c === 'from' ? dir.setFrom(ctxPlace) : dir.setTo(ctxPlace);
 });
 map.on('movestart', hideCtx);

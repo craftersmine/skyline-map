@@ -6,12 +6,17 @@ import { detectTolls } from './tolls';
 import { setLang } from './i18n';
 import { bestSchematic } from './schematic-render';
 import type { SchemInput } from './schematic';
+import { reachGrid } from './reach';
+import { cityKeys, scanExport, bornById, exportTime, type HistoryKeys } from './history';
+import type { CityData } from './parse';
 
 let router: Router | null = null;
 let schemInput: SchemInput | null = null;
 const schemCache = new Map<string, unknown>();
 
 let lastHeight: { h: Float32Array; size: number } | null = null;
+let lastCity: CityData | null = null;
+let history: HistoryKeys | null = null;
 
 async function decode(buf: ArrayBuffer): Promise<string> {
   const head = new Uint8Array(buf, 0, Math.min(2, buf.byteLength));
@@ -36,6 +41,7 @@ self.onmessage = async (e: MessageEvent) => {
       const p = (s: string) => progress(s, 8 + (steps.indexOf(s) + 1) * 8.5);
       const city = parseCity(xml, p);
       lastHeight = { h: city.height, size: city.terrainSize };
+      lastCity = city; history = null;
       const oneway = inferOneWay(city);
       const tolls = detectTolls(city);
       const built = buildCity(city, p, oneway, tolls);
@@ -50,6 +56,19 @@ self.onmessage = async (e: MessageEvent) => {
     } else if (msg.type === 'route') {
       const routes = router ? router.route(msg.from, msg.to, msg.mode, { avoidTolls: !!msg.avoidTolls }) : [];
       self.postMessage({ type: 'route', id: msg.id, mode: msg.mode, routes });
+    } else if (msg.type === 'reach') {
+      const grid = router ? reachGrid(router.nodePositions(), router.reachTimes(msg.from, msg.mode, msg.max), msg.max) : null;
+      self.postMessage({ type: 'reach', id: msg.id, grid }, grid ? { transfer: [grid.t.buffer] } : {});
+    } else if (msg.type === 'historyStart' && lastCity) {
+      history = cityKeys(lastCity, exportTime(lastCity.generated));
+      self.postMessage({ type: 'historyStart', name: lastCity.name, time: exportTime(lastCity.generated) });
+    } else if (msg.type === 'historyFile' && history) {
+      const r = scanExport(await decode(msg.buffer), history);
+      self.postMessage({ type: 'historyFile', id: msg.id, ...r });
+    } else if (msg.type === 'historyDone' && history && lastCity) {
+      const born = bornById(lastCity, history);
+      history = null;
+      self.postMessage({ type: 'history', ...born });
     } else if (msg.type === 'schematic') {
       // which modes exist, and the diagram for the requested ones (cached per mode set)
       const available = [...new Set((schemInput?.lines ?? []).map((l) => l.mode))];

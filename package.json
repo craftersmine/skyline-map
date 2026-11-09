@@ -13,6 +13,8 @@
     "check:access": "tsx tools/access-check.ts",
     "check:districts": "tsx tools/district-check.ts",
     "check:transit": "tsx tools/transit-check.ts",
+    "check:reach": "tsx tools/reach-check.ts",
+    "check:history": "tsx tools/history-check.ts",
     "check:schematic": "tsx tools/schematic-check.ts",
     "check:i18n": "tsx tools/i18n-check.ts",
     "check:tolls": "tsx tools/toll-check.ts",
