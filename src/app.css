@@ -256,6 +256,7 @@ a.menu-item { color: inherit; text-decoration: none; box-sizing: border-box; }
 /* ---------- directions panel ---------- */
 #dir { position: absolute; left: 0; top: 0; bottom: 0; width: 408px; max-width: 100vw; background: var(--bg); z-index: 7; box-shadow: var(--shadow-lg); display: flex; flex-direction: column; animation: drawer .2s ease-out; }
 body.dir-open #layerSwitch { left: 420px; }
+body.dir-open #simLegend { left: 508px; }
 .dir-head { display: flex; align-items: center; padding: 8px 8px 0 12px; gap: 4px; }
 .dir-modes { display: flex; flex: 1; gap: 2px; }
 .dir-mode { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px 6px; border-radius: 18px; color: var(--muted); min-height: 54px; }
@@ -858,3 +859,68 @@ body.closure-open .maplibregl-canvas { cursor: crosshair; }
 .dc-cta { padding: 0 14px 12px; }
 .dc-cta .pill svg { width: 18px; height: 18px; }
 .dc-play[aria-pressed='true'] { color: var(--dc-gold-ink); background: var(--dc-gold); }
+
+/* ------------------------------------------------------------------ simulation data (.crp) */
+:root { --sim-ok: #188038; --sim-near: #b06000; --sim-bad: #c5221f; --sim-tint: 10%; }
+:root[data-theme='dark'] { --sim-ok: #81c995; --sim-near: #fdd663; --sim-bad: #f28b82; --sim-tint: 18%; }
+#sim { position: absolute; left: 12px; top: 72px; width: 400px; max-width: calc(100vw - 24px); max-height: calc(100vh - 96px); z-index: 6; display: flex; flex-direction: column; overflow: hidden; animation: slide .15s; }
+#sim > .m-head { padding: 12px 6px 6px 16px; flex: none; }
+#sim > .m-head b { font-size: 17px; font-weight: 700; }
+.sim-scroll { overflow: auto; flex: 1; min-height: 0; padding: 0 16px 14px; overscroll-behavior: contain; }
+.sim-lede { margin: 2px 0 10px; font-size: 14px; line-height: 1.5; }
+.sim-tip { margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--hover); font-size: 12.5px; line-height: 1.5; }
+.sim-note { margin: 8px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--muted); overflow-wrap: anywhere; }
+.sim-note code { font-size: 11px; }
+.sim-progress { height: 4px; border-radius: 2px; background: var(--hover); overflow: hidden; margin-top: 10px; }
+.sim-progress i { display: block; height: 100%; width: 40%; background: var(--accent); border-radius: 2px; animation: sim-indet 1.2s ease-in-out infinite; }
+@keyframes sim-indet { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+.sim-status { --v: var(--sim-ok); margin-top: 4px; padding: 12px 14px; border-radius: 12px; background: color-mix(in srgb, var(--v) var(--sim-tint), transparent); }
+.sim-status.near { --v: var(--sim-near); }
+.sim-status.bad { --v: var(--sim-bad); }
+.sim-status b { display: block; font-size: 17px; font-weight: 700; color: var(--v); }
+.sim-status p { margin: 4px 0 0; font-size: 13.5px; line-height: 1.45; }
+.sim-status p.sim-note { font-size: 11.5px; }
+#sim h4 { margin: 16px 0 6px; font-size: 13px; font-weight: 600; }
+.sim-layers { display: flex; flex-wrap: wrap; gap: 6px; }
+.sim-layers button { height: 30px; padding: 0 12px; border-radius: 15px; border: 1px solid var(--line); font-size: 12.5px; color: var(--fg); }
+.sim-layers button:hover { background: var(--hover); }
+.sim-layers button[aria-checked='true'] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.sim-legend { margin-top: 10px; }
+.sim-ramp { display: block; height: 10px; border-radius: 5px; }
+.sim-ramp.mini { width: 56px; height: 8px; flex: none; }
+.sim-legend-ends { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+.sim-stats { gap: 12px 18px; }
+.sim-stats div { min-width: 96px; }
+.sim-stats b { font-size: 17px; font-variant-numeric: tabular-nums; }
+.sim-stats small { font-size: 11px; color: var(--muted); }
+.sim-bars { margin-top: 10px; font-size: 12.5px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+.sim-bar { display: grid; grid-template-columns: 112px 1fr 48px; align-items: center; gap: 8px; color: var(--fg); }
+.sim-bar span { font-size: 12.5px; color: var(--muted); }
+.sim-bar i { height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--accent) var(--w), var(--hover) var(--w)); }
+.sim-bar b { font-size: 12.5px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.sim-tax { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; font-size: 12.5px; }
+.sim-tax > span { grid-column: 1 / -1; color: var(--muted); }
+.sim-tax div { display: flex; flex-direction: column; }
+.sim-tax div span { color: var(--muted); font-size: 11.5px; }
+.sim-tax small { color: var(--muted); font-weight: 400; }
+.sim-lines { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
+.sim-line { display: grid; grid-template-columns: 12px minmax(0, 1fr) 90px 56px; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 10px; text-align: left; }
+.sim-line:hover { background: var(--hover); }
+.sim-line .dot { width: 10px; height: 10px; border-radius: 50%; }
+.sim-line .nm { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sim-line .bar { height: 6px; border-radius: 3px; background: var(--hover); overflow: hidden; }
+.sim-line .bar i { display: block; height: 100%; border-radius: 3px; }
+.sim-line b { font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums; }
+.sim-foot { margin-top: 16px; }
+#simLegend { position: absolute; left: 100px; bottom: 36px; z-index: 5; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; font-size: 12.5px; font-weight: 500; color: var(--fg); }
+.p-sim { margin: 0 0 12px; padding: 8px 0 4px; border-top: 1px solid var(--line); }
+.p-sim-h { padding: 4px 22px 2px; font-size: 11.5px; font-weight: 600; color: var(--sim-ok); }
+.p-sim.muted .p-sim-h { color: var(--muted); }
+.p-sim p { margin: 2px 22px 6px; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.p-row.sub { padding-top: 0; font-size: 12.5px; }
+.p-row.sub span:last-child { color: var(--muted); font-weight: 400; }
+@media (prefers-reduced-motion: reduce) { #sim { animation: none; } .sim-progress i { animation: none; width: 100%; opacity: .5; } }
+@media (max-width: 640px) {
+  #sim.sheet { height: calc(100vh - 56px); max-height: none; z-index: 6; }
+  #simLegend { left: 12px; bottom: calc(var(--sheet-h, 0px) + 84px); }
+}

@@ -15,6 +15,7 @@ import { createReach } from './reach-ui';
 import { createTimelapse } from './timelapse';
 import { createDiscoveries } from './discover-ui';
 import { createClosure, CLOSURE_ICON } from './closure-ui';
+import { createSim } from './sim-ui';
 import { createSchematic } from './schematic-view';
 import { createContextStore, createContextEditor, moneyField, parseMoney, describeRule } from './context-ui';
 import { bottomSheet, isPhone } from './sheet';
@@ -87,6 +88,7 @@ function applyStyle() {
   reach.refresh();
   timelapse.refresh();
   closure.refresh();
+  sim.refresh();
   document.documentElement.dataset.theme = state.mode === 'night' ? 'dark' : 'light';
   if ((state.opts.contours || state.mode === 'terrain') && state.city && !state.contoursLoaded) requestContours();
   syncUi();
@@ -105,6 +107,7 @@ worker.onmessage = (e) => {
   else if (m.type === 'schematic') schem.onMessage(m);
   else if (m.type === 'reach') reach.onResult(m);
   else if (m.type === 'closure' || m.type === 'closureReach') closure.onMessage(m);
+  else if (m.type === 'sim' || m.type === 'simProgress') sim.onMessage(m);
   else if (m.type === 'contours') { (map.getSource('contours') as GeoJSONSource).setData(m.fc); state.contoursLoaded = true; }
 };
 function requestContours() { state.contoursLoaded = true; worker.postMessage({ type: 'contours', interval: 10, major: 50 }); }
@@ -131,6 +134,7 @@ function showCity(city: BuiltCity) {
   timelapse.reset();
   discoveries.set(city.discoveries ?? null);
   closure.reset();
+  sim.reset();
   $('discoverBtn').hidden = !discoveries.count();
   state.city = city;
   state.contoursLoaded = false;
@@ -343,7 +347,7 @@ function selectLine(id: number, fit: boolean) {
   if (fit && line.bbox) map.fitBounds([[line.bbox[0], line.bbox[1]], [line.bbox[2], line.bbox[3]]], { padding: { top: 90, bottom: 60, left: innerWidth > 700 ? 420 : 40, right: 60 }, maxZoom: 15.5 });
   const stations = c.sources.places.features.filter((f) => (f.properties.kind === 'station' || f.properties.kind === 'busstop') && String(f.properties.lines).split(' · ').includes(line.name)).length;
   panelRefresh = () => selectLine(id, false);
-  panel(head(line.name, t('{mode} line', { mode: modeName(line.type) }), iconDataUrl(line.type, line.color)) + `<div class="p-rows">${row('Mode', modeName(line.type))}${row('Stops', line.stops)}${row('Stations on map', stations || null)}${fareRow(line)}<div class="p-row"><span>${t('Colour')}</span><span><i class="swatch" style="background:${line.color}"></i>${line.color}</span></div></div>${stopList(line)}`, line.color);
+  panel(head(line.name, t('{mode} line', { mode: modeName(line.type) }), iconDataUrl(line.type, line.color)) + `<div class="p-rows">${row('Mode', modeName(line.type))}${row('Stops', line.stops)}${row('Stations on map', stations || null)}${fareRow(line)}<div class="p-row"><span>${t('Colour')}</span><span><i class="swatch" style="background:${line.color}"></i>${line.color}</span></div></div>${sim.lineHtml(id)}${stopList(line)}`, line.color);
 }
 
 function describe(f: MapGeoJSONFeature, lng: number, lat: number) {
@@ -387,7 +391,7 @@ function describeRest(f: MapGeoJSONFeature, p: any, layer: string, geom: any, ln
     const grp = p.grp ?? p.id, parts = Number(p.nparts) > 1 ? c.sources.lots.features.filter((x) => (x.properties.grp ?? x.properties.id) === grp) as any[] : lot ? [lot] : [];
     setSelection(parts.map((x) => ({ type: 'Feature', geometry: x.geometry, properties: {} })));
     const level = /Level ?(\d)/.exec(p.icls ?? '')?.[1];
-    panel(head(nameOf(p) || L(p.cat) || t('Building'), L(p.cat) ?? p.cat) + `<div class="p-rows">${row('District', p.district)}${row('This part', p.part ? p.asset : null)}${row('Buildings in asset', Number(p.nparts) > 1 ? p.nparts : null)}${row('Zone / service', String(p.srv ?? '').replace(/([a-z])([A-Z])/g, '$1 $2'))}${row('Class', p.icls)}${p.named && !p.part ? row('Asset', p.asset) : ''}${row('Level', level)}${row('Lot area', p.area ? p.area + ' m²' : null)}${row('Est. height', bld?.properties.h ? bld.properties.h + ' m' : null)}${row('Asset ID', p.id)}</div>`);
+    panel(head(nameOf(p) || L(p.cat) || t('Building'), L(p.cat) ?? p.cat) + `<div class="p-rows">${row('District', p.district)}${row('This part', p.part ? p.asset : null)}${row('Buildings in asset', Number(p.nparts) > 1 ? p.nparts : null)}${row('Zone / service', String(p.srv ?? '').replace(/([a-z])([A-Z])/g, '$1 $2'))}${row('Class', p.icls)}${p.named && !p.part ? row('Asset', p.asset) : ''}${row('Level', level)}${row('Lot area', p.area ? p.area + ' m²' : null)}${row('Est. height', bld?.properties.h ? bld.properties.h + ' m' : null)}${row('Asset ID', p.id)}</div>${sim.buildingHtml(Number(p.id))}`);
     return;
   }
   if (layer === 'water') { panel(head(t('Water'), t('Lake, river or sea')) + `<div class="p-rows">${row('Position', coordText(lng, lat))}</div>`, '#a2cdf3'); return; }
@@ -401,7 +405,7 @@ function describeRest(f: MapGeoJSONFeature, p: any, layer: string, geom: any, ln
   setSelection(sel);
   const totalLen = p.name ? Math.round(sel.reduce((s, x) => s + lineLen(x.geometry.coordinates), 0)) : p.len;
   panel(head(name, (L(p.cls) ?? p.cls) + (p.brunnel === 'bridge' ? ' · ' + t('Bridge / elevated') : p.brunnel === 'tunnel' ? ' · ' + t('Tunnel') : '')) +
-    `<div class="p-rows">${row('Road type', p.type)}${row('District', p.district)}${row('Lanes', p.lanes || null)}${row('Speed limit', p.speed ? p.speed + ' km/h' : null)}${row('Bike lane', p.bike ? t('Yes') : null)}${row('Carriageway', p.w ? p.w + ' m' : null)}${row('One-way', p.oneway ? t('Yes') : null)}${row(p.name ? t('Total length') : t('Segment length'), totalLen ? (totalLen > 1000 ? (totalLen / 1000).toFixed(2) + ' km' : totalLen + ' m') : null)}${row('Elevation', p.z !== undefined ? Math.round(p.z) + ' m' : null)}</div>${p.id !== undefined && !['runway', 'taxiway', 'canal', 'ferry'].includes(p.cls) ? `<div class="p-actions">${closeBtn({ kind: /rail|subway|monorail|tram|cablecar/.test(p.cls) ? 'rail' : 'road', seg: Number(p.id) })}</div>` : ''}`);
+    `<div class="p-rows">${row('Road type', p.type)}${row('District', p.district)}${row('Lanes', p.lanes || null)}${row('Speed limit', p.speed ? p.speed + ' km/h' : null)}${row('Bike lane', p.bike ? t('Yes') : null)}${row('Carriageway', p.w ? p.w + ' m' : null)}${row('One-way', p.oneway ? t('Yes') : null)}${row(p.name ? t('Total length') : t('Segment length'), totalLen ? (totalLen > 1000 ? (totalLen / 1000).toFixed(2) + ' km' : totalLen + ' m') : null)}${row('Elevation', p.z !== undefined ? Math.round(p.z) + ' m' : null)}</div>${p.id !== undefined && !/rail|subway|monorail|tram|cablecar/.test(p.cls) ? sim.roadHtml(Number(p.id)) : ''}${p.id !== undefined && !['runway', 'taxiway', 'canal', 'ferry'].includes(p.cls) ? `<div class="p-actions">${closeBtn({ kind: /rail|subway|monorail|tram|cablecar/.test(p.cls) ? 'rail' : 'road', seg: Number(p.id) })}</div>` : ''}`);
 }
 /** The district shown as a soft region (estimated: no district shapes in the export), redrawn on theme changes. */
 let glowDistrict: number | null = null;
@@ -470,6 +474,7 @@ map.on('click', (e) => {
   if (discoveries.isActive()) return;
   if (closure.isActive()) { closurePickAt(e.point); return; }
   if (dir.isOpen()) { dir.mapClick([e.lngLat.lng, e.lngLat.lat], placeLabelAt(e.point)); return; }
+  if (sim.isOpen()) sim.close();
   const r = 6;
   const feats = map.queryRenderedFeatures([[e.point.x - r, e.point.y - r], [e.point.x + r, e.point.y + r]], { layers: interactive() });
   if (!feats.length) { closePanel(); return; }
@@ -519,7 +524,7 @@ const dir = createDirections({
   map, worker, city: () => state.city,
   pricing, editPricing: (tab, focus) => pricingEd.open(tab, focus),
   showOnSchematic: (route) => schem.open({ route }),
-  onOpen: () => { closePanel(); if (reach.isActive()) reach.close(); discoveries.close(); closure.close(); $('topbar').hidden = true; document.body.classList.add('dir-open'); },
+  onOpen: () => { closePanel(); sim.close(); if (reach.isActive()) reach.close(); discoveries.close(); closure.close(); $('topbar').hidden = true; document.body.classList.add('dir-open'); },
   onClose: () => { $('topbar').hidden = false; document.body.classList.remove('dir-open'); },
 });
 $('dirBtn').onclick = () => dir.open();
@@ -535,18 +540,18 @@ const reach = createReach(map, {
   worker,
   land: () => state.city?.districtField ?? null,
   night: () => state.mode === 'night',
-  onOpen: () => { closeDrawer(); closePanel(); if (dir.isOpen()) dir.close(); if (measure.isActive()) measure.close(); if (timelapse.isActive()) timelapse.close(); discoveries.close(); closure.close(); },
+  onOpen: () => { closeDrawer(); closePanel(); sim.close(); if (dir.isOpen()) dir.close(); if (measure.isActive()) measure.close(); if (timelapse.isActive()) timelapse.close(); discoveries.close(); closure.close(); },
 });
 $('reachBtn').onclick = () => { closeDrawer(); const c = map.getCenter(); reach.open([c.lng, c.lat]); };
 
 const timelapse = createTimelapse(map, {
   worker, city: () => state.city, currentFile: () => state.currentFile, toast,
-  onOpen: () => { closeDrawer(); closePanel(); if (reach.isActive()) reach.close(); if (measure.isActive()) measure.close(); discoveries.close(); closure.close(); },
+  onOpen: () => { closeDrawer(); closePanel(); sim.close(); if (reach.isActive()) reach.close(); if (measure.isActive()) measure.close(); discoveries.close(); closure.close(); },
 });
 $('timelapseBtn').onclick = () => timelapse.open();
 
 const discoveries = createDiscoveries(map, {
-  onOpen: () => { closeDrawer(); closePanel(); hideCtx(); if (dir.isOpen()) dir.close(); if (reach.isActive()) reach.close(); if (measure.isActive()) measure.close(); if (timelapse.isActive()) timelapse.close(); closure.close(); },
+  onOpen: () => { sim.close(); closeDrawer(); closePanel(); hideCtx(); if (dir.isOpen()) dir.close(); if (reach.isActive()) reach.close(); if (measure.isActive()) measure.close(); if (timelapse.isActive()) timelapse.close(); closure.close(); },
 });
 $('discoverBtn').onclick = () => (discoveries.isActive() ? discoveries.close() : discoveries.open());
 $('discoverMenu').onclick = () => discoveries.open();
@@ -555,9 +560,16 @@ const closure = createClosure(map, {
   worker, toast,
   land: () => state.city?.districtField ?? null,
   night: () => state.mode === 'night',
-  onOpen: () => { closeDrawer(); closePanel(); hideCtx(); if (dir.isOpen()) dir.close(); if (reach.isActive()) reach.close(); if (measure.isActive()) measure.close(); if (timelapse.isActive()) timelapse.close(); discoveries.close(); },
+  onOpen: () => { sim.close(); closeDrawer(); closePanel(); hideCtx(); if (dir.isOpen()) dir.close(); if (reach.isActive()) reach.close(); if (measure.isActive()) measure.close(); if (timelapse.isActive()) timelapse.close(); discoveries.close(); },
 });
 $('closureMenu').onclick = () => closure.open();
+
+const sim = createSim(map, {
+  worker, toast, city: () => state.city,
+  selectLine: (id) => selectLine(id, true),
+  onOpen: () => { closeDrawer(); closePanel(); hideCtx(); if (dir.isOpen()) dir.close(); if (reach.isActive()) reach.close(); if (measure.isActive()) measure.close(); if (timelapse.isActive()) timelapse.close(); discoveries.close(); closure.close(); },
+});
+$('simMenu').onclick = () => sim.open();
 /** What a click while closing picks: a station, a railway, or a road (nearest of each in a small box). */
 function closurePickAt(pt: { x: number; y: number }) {
   const r = 8, box: [[number, number], [number, number]] = [[pt.x - r, pt.y - r], [pt.x + r, pt.y + r]];

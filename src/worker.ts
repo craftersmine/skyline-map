@@ -11,6 +11,7 @@ import { discover } from './discover';
 import { createClosures, segInfoFrom } from './closure';
 import { cityKeys, scanExport, bornById, exportTime, type HistoryKeys } from './history';
 import type { CityData } from './parse';
+import { loadSim, transferables } from './sim';
 
 let router: Router | null = null;
 let closures: ReturnType<typeof createClosures> | null = null;
@@ -89,6 +90,14 @@ self.onmessage = async (e: MessageEvent) => {
       const k = modes.join(',');
       if (!schemCache.has(k)) schemCache.set(k, schemInput && modes.length ? bestSchematic(schemInput, modes) : null);
       self.postMessage({ type: 'schematic', id: msg.id, available, modes, layout: schemCache.get(k) });
+    } else if (msg.type === 'sim') {
+      // optional simulation data from a save; never touches the map built above
+      // i18n-keys: sim progress steps, shown translated by the page
+      void ['Reading save file', 'Checking it matches this map', 'Reading simulation data'];
+      // end i18n-keys
+      if (!lastCity) { self.postMessage({ type: 'sim', id: msg.id, result: { ok: false, code: 'corrupt', detail: 'no map open' } }); return; }
+      const result = await loadSim(msg.buffer, lastCity, (step) => self.postMessage({ type: 'simProgress', id: msg.id, step }));
+      self.postMessage({ type: 'sim', id: msg.id, result }, { transfer: transferables(result) });
     } else if (msg.type === 'lang') {
       setLang(msg.lang, false); // directions text is written in the UI language
     } else if (msg.type === 'contours' && lastHeight) {

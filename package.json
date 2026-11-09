@@ -21,7 +21,8 @@
     "check:i18n": "tsx tools/i18n-check.ts",
     "check:tolls": "tsx tools/toll-check.ts",
     "check:groups": "tsx tools/group-check.ts",
-    "check:route-geometry": "tsx tools/route-geometry-check.ts"
+    "check:route-geometry": "tsx tools/route-geometry-check.ts",
+    "check:sim": "tsx tools/sim-check.ts"
   },
   "author": "",
   "license": "ISC",

@@ -60,7 +60,7 @@ const MINW: Record<string, [number, number, number]> = {
 const byClass = (vals: Record<string, string | number>, fallback: string | number): E =>
   ['match', ['get', 'cls'], ...CLASSES.flatMap((c) => [c, vals[c] ?? fallback]), fallback] as unknown as E;
 
-function roadWidth(extra: [number, number, number, number] = [0, 0, 0, 0]): E {
+export function roadWidth(extra: [number, number, number, number] = [0, 0, 0, 0]): E {
   const minAt = (i: number) => byClass(Object.fromEntries(CLASSES.map((c) => [c, MINW[c][i]])), 0);
   const phys = (z: number): E => ['*', ['get', 'w'], K(z)];
   return ['interpolate', ['exponential', 2], ['zoom'],

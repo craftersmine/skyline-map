@@ -54,6 +54,7 @@ Guides at `/blog/` (exporting, finding files, transit maps, directions, tolls an
 | `src/history.ts`, `src/timelapse.ts` | City time-lapse: first-seen times from older exports (worker), slider and map filters (page) |
 | `src/discover.ts`, `src/discover-ui.ts` | City discoveries: records measured from the export (worker, `npm run check:discover`), collection panel, spotlight and gold map highlight (page) |
 | `src/closure.ts`, `src/closure-ui.ts` | What if it closes?: closes roads, bridges, tunnels, railways or stations in the router (worker, `npm run check:closure`), compares trips, cut lines, cut-off roads and 30-minute reach before and after (page) |
+| `src/sim/`, `src/sim-ui.ts` | Optional simulation data from a game save (.crp): save readers, compatibility check against the open map, traffic/land value/noise/pollution/crime layers and info-panel rows (worker + page, `npm run check:sim`, see [docs/sim-data.md](docs/sim-data.md)) |
 | `src/tolls.ts` | Toll booths ↔ their gate/approach segments ↔ the roads they sit on |
 | `src/context.ts` | City pricing data: currency format, fare/transfer/toll maths, entity matching, import validation, IndexedDB |
 | `src/context-ui.ts` | Pricing store for the open city and the pricing editor sheet |
