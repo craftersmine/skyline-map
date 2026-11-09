@@ -14,6 +14,7 @@ import { createSchematic } from './schematic-view';
 import { createContextStore, createContextEditor, moneyField, parseMoney, describeRule } from './context-ui';
 import { bottomSheet, isPhone } from './sheet';
 import { mountFindFile } from './findfile';
+import { showDistrictGlow, clearDistrictGlow } from './district-glow';
 import { t, tn, initLang, setLang, onLang, applyStatic, getLang, LANGS, locale, type Lang } from './i18n';
 
 initLang();
@@ -77,6 +78,7 @@ function applyStyle() {
   if (JSON.stringify(currentStyle.light) !== JSON.stringify(next.light)) map.setLight(next.light!);
   currentStyle = next;
   extruded = null; updateExtrusion();
+  drawGlow();
   document.documentElement.dataset.theme = state.mode === 'night' ? 'dark' : 'light';
   if ((state.opts.contours || state.mode === 'terrain') && state.city && !state.contoursLoaded) requestContours();
   syncUi();
@@ -272,6 +274,7 @@ const interactive = () => INTERACTIVE.filter((id) => map.getLayer(id) && map.get
 
 function setSelection(features: { type: 'Feature'; geometry: any; properties: any }[]) {
   (map.getSource('selection') as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features });
+  glowDistrict = null; clearDistrictGlow(map);
 }
 
 // place shown in the panel, offered as a directions target
@@ -385,18 +388,29 @@ function describeRest(f: MapGeoJSONFeature, p: any, layer: string, geom: any, ln
   panel(head(name, (L(p.cls) ?? p.cls) + (p.brunnel === 'bridge' ? ' · ' + t('Bridge / elevated') : p.brunnel === 'tunnel' ? ' · ' + t('Tunnel') : '')) +
     `<div class="p-rows">${row('Road type', p.type)}${row('District', p.district)}${row('Lanes', p.lanes || null)}${row('Speed limit', p.speed ? p.speed + ' km/h' : null)}${row('Bike lane', p.bike ? t('Yes') : null)}${row('Carriageway', p.w ? p.w + ' m' : null)}${row('One-way', p.oneway ? t('Yes') : null)}${row(p.name ? t('Total length') : t('Segment length'), totalLen ? (totalLen > 1000 ? (totalLen / 1000).toFixed(2) + ' km' : totalLen + ' m') : null)}${row('Elevation', p.z !== undefined ? Math.round(p.z) + ' m' : null)}</div>`);
 }
+/** The district shown as a soft region (estimated: no district shapes in the export), redrawn on theme changes. */
+let glowDistrict: number | null = null;
+function drawGlow() {
+  const f = state.city?.districtField;
+  if (glowDistrict === null || !f) return;
+  showDistrictGlow(map, f, glowDistrict, state.mode === 'night' ? '#b7a6e8' : '#7d5fc4', state.mode === 'night');
+}
 function showDistrict(name: string) {
   const c = state.city!;
   const dl = c.sources.places.features.find((f) => f.properties.kind === 'district' && f.properties.name === name);
   panelPlace = dl ? { label: name, ll: (dl.geometry as any).coordinates } : null;
   const areas = c.sources.districts.features.filter((f) => f.properties.name === name) as any[];
-  setSelection(areas.map((f) => ({ type: 'Feature', geometry: f.geometry, properties: {} })));
+  setSelection([]);
+  glowDistrict = dl ? Number(dl.properties.did) : null;
+  drawGlow();
   let area = 0;
   for (const f of areas) area += Math.abs(ringAreaLL(f.geometry.coordinates[0]));
   const blds = c.sources.lots.features.filter((f) => f.properties.district === name);
   const by = (cat: string) => blds.filter((f) => String(f.properties.cat).startsWith(cat)).length;
   const stations = c.sources.places.features.filter((f) => f.properties.kind === 'station' && f.properties.name && areas.some((a) => inPoly((f.geometry as any).coordinates, a.geometry.coordinates))).map((f) => String(f.properties.name));
-  panel(head(name, t('District')) + `<div class="p-rows">${row('Area', area ? (area / 1e6).toFixed(2) + ' km²' : null)}${row('Buildings', blds.length || null)}${row('Residential', by('residential') || null)}${row('Commercial / office', by('commercial') + by('office') || null)}${row('Industrial', by('industrial') || null)}${row('Stations', stations.join(', ') || null)}</div>`, '#8c7fa6');
+  const about = (v: number | null) => (v ? '≈ ' + v : null);
+  panel(head(name, t('District, estimated area')) + `<div class="p-rows">${row('Area', area ? '≈ ' + (area / 1e6).toFixed(2) + ' km²' : null)}${row('Buildings', about(blds.length))}${row('Residential', about(by('residential')))}${row('Commercial / office', about(by('commercial') + by('office')))}${row('Industrial', about(by('industrial')))}${row('Stations', stations.join(', ') || null)}</div>
+    <p class="p-note">${t('The export has no district boundaries. This area is estimated from the district label and the transit stops that record it, so its edges and counts are approximate.')}</p>`, '#7d5fc4');
 }
 function ringAreaLL(r: [number, number][]) { let a = 0; for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const p = fromLngLat(r[i][0], r[i][1]), q = fromLngLat(r[j][0], r[j][1]); a += (q[0] - p[0]) * (q[1] + p[1]); } return a / 2; }
 function inPoly(pt: [number, number], rings: [number, number][][]) {

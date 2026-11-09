@@ -45,7 +45,8 @@ self.onmessage = async (e: MessageEvent) => {
       schemInput = built.schem ?? null; schemCache.clear();
       delete built.schem;
       progress('Rendering', 96);
-      self.postMessage({ type: 'city', city: built }, { transfer: [built.dem.surface.buffer] });
+      const df = built.districtField;
+      self.postMessage({ type: 'city', city: built }, { transfer: [built.dem.surface.buffer, ...(df ? [df.l1.buffer, df.d1.buffer, df.l2.buffer, df.d2.buffer, df.land.buffer] : [])] });
     } else if (msg.type === 'route') {
       const routes = router ? router.route(msg.from, msg.to, msg.mode, { avoidTolls: !!msg.avoidTolls }) : [];
       self.postMessage({ type: 'route', id: msg.id, mode: msg.mode, routes });

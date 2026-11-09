@@ -23,6 +23,8 @@ export interface BuiltCity {
   search: SearchEntry[];
   /** station name per stop node (kept in the worker for routing) */
   stopNames?: Map<number, string>;
+  /** the soft district field (see districtField), for drawing estimated districts as fading regions */
+  districtField?: { n: number; cell: number; l1: Int32Array; d1: Float32Array; l2: Int32Array; d2: Float32Array; land: Uint8Array };
   /** network for the schematic map (worker only, not sent to the page) */
   schem?: SchemInput;
 }
@@ -223,35 +225,56 @@ export function districtSamples(city: CityData) {
   for (const d of city.districts) if (d.id && !(Math.abs(d.x) >= HALF - 1 && Math.abs(d.z) >= HALF - 1)) out.push({ x: d.x, z: d.z, dist: d.id });
   return out;
 }
-export function districtGrid(nodes: DistrictSample[], reach = 600, noneBias = 20) {
-  const cell = MAP_SIZE / 512, n = 512;
-  // distances in full precision: compared against the heap's own values, a Float32 copy rounds below them
-  // about half the time and the cell is then skipped, never growing (patchy, broken-up districts)
-  const label = new Int32Array(n * n), dist = new Float64Array(n * n).fill(Infinity);
-  const h: [number, number][] = []; // simple binary heap of [distance, cell]
-  const push = (d: number, k: number) => { h.push([d, k]); let i = h.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (h[p][0] <= h[i][0]) break; [h[p], h[i]] = [h[i], h[p]]; i = p; } };
+/**
+ * The two nearest districts of every cell of the game's 512 x 512 district grid (33.75 m cells), by walking
+ * distance over the grid from the samples: the nearest is the district drawn there, the second and the gap
+ * between them say how sure that is (a cell between two stations of different districts is a guess). Cells
+ * farther than `reach` from every sample stay unlabelled (0); 'no district' samples carry a `noneBias` m
+ * handicap. Distances are kept in full precision: compared against the heap's own values, a Float32 copy rounds
+ * below them about half the time and the cell is then skipped, never growing (patchy, broken-up districts).
+ */
+export function districtField(nodes: DistrictSample[], reach = 600, noneBias = 20) {
+  const cell = MAP_SIZE / 512, n = 512, N = n * n;
+  const l1 = new Int32Array(N), l2 = new Int32Array(N).fill(-1), d1 = new Float64Array(N).fill(Infinity), d2 = new Float64Array(N).fill(Infinity);
+  const h: [number, number, number][] = []; // binary heap of [distance, cell, district]
+  const push = (d: number, k: number, id: number) => { h.push([d, k, id]); let i = h.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (h[p][0] <= h[i][0]) break; [h[p], h[i]] = [h[i], h[p]]; i = p; } };
   const pop = () => { const top = h[0], last = h.pop()!; if (h.length) { h[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < h.length && h[l][0] < h[m][0]) m = l; if (r < h.length && h[r][0] < h[m][0]) m = r; if (m === i) break; [h[m], h[i]] = [h[i], h[m]]; i = m; } } return top; };
+  /** offer district `id` at distance `d` to cell `k`; true when it became the cell's first or second */
+  const offer = (k: number, d: number, id: number) => {
+    if (id === l1[k]) { if (d < d1[k]) { d1[k] = d; return true; } return false; }
+    if (d < d1[k]) { if (Number.isFinite(d1[k])) { l2[k] = l1[k]; d2[k] = d1[k]; } l1[k] = id; d1[k] = d; return true; }
+    if (id === l2[k]) { if (d < d2[k]) { d2[k] = d; return true; } return false; }
+    if (d < d2[k]) { l2[k] = id; d2[k] = d; return true; }
+    return false;
+  };
   for (const nd of nodes) {
     const gx = (nd.x + HALF) / cell - 0.5, gz = (nd.z + HALF) / cell - 0.5;
     const i = Math.round(gx), j = Math.round(gz);
     if (i < 0 || j < 0 || i >= n || j >= n) continue;
-    const k = j * n + i, d = Math.hypot(gx - i, gz - j) * cell + (nd.dist ? 0 : noneBias); // `noneBias` m handicap for 'no district' samples
-    if (d < dist[k]) { dist[k] = d; label[k] = nd.dist; push(d, k); }
+    const k = j * n + i, d = Math.hypot(gx - i, gz - j) * cell + (nd.dist ? 0 : noneBias);
+    if (offer(k, d, nd.dist)) push(d, k, nd.dist);
   }
   const steps: [number, number, number][] = [[1, 0, cell], [-1, 0, cell], [0, 1, cell], [0, -1, cell], [1, 1, cell * Math.SQRT2], [1, -1, cell * Math.SQRT2], [-1, 1, cell * Math.SQRT2], [-1, -1, cell * Math.SQRT2]];
   while (h.length) {
-    const [d, k] = pop();
-    if (d > dist[k]) continue;
+    const [d, k, id] = pop();
+    if (!((id === l1[k] && d <= d1[k]) || (id === l2[k] && d <= d2[k]))) continue; // superseded
     const i = k % n, j = (k / n) | 0;
     for (const [di, dj, c] of steps) {
       const a = i + di, b = j + dj;
       if (a < 0 || b < 0 || a >= n || b >= n) continue;
       const q = b * n + a, nd = d + c;
-      if (nd < dist[q] && nd <= reach) { dist[q] = nd; label[q] = label[k]; push(nd, q); }
+      if (nd <= reach && offer(q, nd, id)) push(nd, q, id);
     }
   }
-  const at = (x: number, z: number) => { const i = Math.floor((x + HALF) / cell), j = Math.floor((z + HALF) / cell); return i >= 0 && j >= 0 && i < n && j < n ? label[j * n + i] : 0; };
-  return { grid: label, n, cell, at };
+  for (let k = 0; k < N; k++) if (!Number.isFinite(d1[k])) l1[k] = 0;
+  return { n, cell, l1, d1, l2, d2 };
+}
+
+/** The district drawn in every cell (the nearest; see districtField). */
+export function districtGrid(nodes: DistrictSample[], reach = 600, noneBias = 20) {
+  const { n, cell, l1 } = districtField(nodes, reach, noneBias);
+  const at = (x: number, z: number) => { const i = Math.floor((x + HALF) / cell), j = Math.floor((z + HALF) / cell); return i >= 0 && j >= 0 && i < n && j < n ? l1[j * n + i] : 0; };
+  return { grid: l1, n, cell, at };
 }
 
 // ------------------------------------------------------------------ main ----
@@ -263,7 +286,8 @@ export function buildCity(city: CityData, progress: (msg: string) => void = () =
 
   // --------------------------------------------------------- districts
   progress('Mapping districts');
-  const { grid: dgrid, n: dn, cell: DC } = districtGrid(districtSamples(city));
+  const field = districtField(districtSamples(city));
+  const { l1: dgrid, n: dn, cell: DC } = field;
   const distName = new Map(city.districts.map((d) => [d.id, d.name]));
   const districtAt = (x: number, z: number) => {
     const i = Math.floor((x + HALF) / DC), j = Math.floor((z + HALF) / DC);
@@ -514,7 +538,7 @@ export function buildCity(city: CityData, progress: (msg: string) => void = () =
   // ---------------------------------------------------- districts/parks
   for (const d of city.districts) {
     if (!d.name || d.id === 0 || (Math.abs(d.x) >= HALF - 1 && Math.abs(d.z) >= HALF - 1)) continue;
-    places.push({ type: 'Feature', properties: { kind: 'district', name: d.name, rank: 1 }, geometry: { type: 'Point', coordinates: ll(d) } });
+    places.push({ type: 'Feature', properties: { kind: 'district', did: d.id, name: d.name, rank: 1 }, geometry: { type: 'Point', coordinates: ll(d) } });
     search.push({ name: d.name, kind: 'district', sub: 'District', center: ll(d), zoom: 15 });
   }
   for (const p of city.parks) {
@@ -770,6 +794,12 @@ export function buildCity(city: CityData, progress: (msg: string) => void = () =
     meta: { name: city.name, generated: city.generated, bounds: [toLngLat(-HALF, -HALF), toLngLat(HALF, HALF)], stats, elevation: { min: emin, max: emax }, lines },
     sources: { land: fc(land), water: fc(water), lots: fc(lots), buildings: fc(blds), roads: fc(roads), rails: fc(rails), transit: fc(transit), places: fc(places), roadLabels: fc(roadLabels), grid: fc(grid), districts: fc(districtFeats) },
     dem: { surface: T.surface, size: n },
+    districtField: (() => {
+      // land mask on the same grid: the regions fade out at the shore (no samples on open water)
+      const land = new Uint8Array(dn * dn);
+      for (let k = 0; k < land.length; k++) { const x = ((k % dn) + 0.5) * DC - HALF, z = (Math.floor(k / dn) + 0.5) * DC - HALF; land[k] = T.surf(x, z) - T.ground(x, z) > 1 ? 0 : 1; }
+      return { n: dn, cell: DC, l1: field.l1, d1: Float32Array.from(field.d1, (v) => (Number.isFinite(v) ? v : 1e9)), l2: field.l2, d2: Float32Array.from(field.d2, (v) => (Number.isFinite(v) ? v : 1e9)), land };
+    })(),
     search,
     stopNames: stopName,
     schem,

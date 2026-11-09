@@ -124,6 +124,8 @@ export const KO: Record<string, string> = {
   "Building": "건물",
   "District": "지구",
   "This part": "이 부분",
+  "District, estimated area": "지구 · 추정 영역",
+  "The export has no district boundaries. This area is estimated from the district label and the transit stops that record it, so its edges and counts are approximate.": "내보내기 파일에는 지구 경계가 없습니다. 이 영역은 지구 이름 위치와 해당 지구로 기록된 대중교통 정류장으로 추정한 것이라, 경계와 개수는 대략적인 값입니다.",
   "Where is my file?": "파일은 어디에 있나요?",
   "Operating system": "운영체제",
   "Open this page on the computer you play on, then pick your system.": "게임을 하는 컴퓨터에서 이 페이지를 연 뒤 운영체제를 고르세요.",
