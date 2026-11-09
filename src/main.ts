@@ -2,6 +2,7 @@ import * as maplibregl from 'maplibre-gl';
 import { type GeoJSONSource, type LayerSpecification, type MapGeoJSONFeature } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './app.css';
+import './consent';
 import mlWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import { buildStyle, SOURCE_KEYS, type StyleOptions } from './style';
 import { registerDemProtocol, setDem } from './dem';

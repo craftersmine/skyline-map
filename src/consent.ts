@@ -1,0 +1,84 @@
+// Cookie consent + Google Analytics. GA loads only after the visitor accepts, so nothing is set before that
+// (and never on localhost). Any element with [data-consent] reopens the banner to change the choice.
+const GA_ID = 'G-123XJYCYYP';
+const KEY = 'atlas:consent';
+const LIVE = location.hostname === 'skyline.codz.me';
+
+type Choice = 'granted' | 'denied';
+const read = (): Choice | null => { try { const v = localStorage.getItem(KEY); return v === 'granted' || v === 'denied' ? v : null; } catch { return null; } };
+const save = (c: Choice) => { try { localStorage.setItem(KEY, c); } catch { /* storage blocked: ask again next visit */ } };
+
+const ko = (() => {
+  let l: string | null = null;
+  try { l = localStorage.getItem('atlas:lang'); } catch { /* ignore */ }
+  return (l ?? navigator.language).toLowerCase().startsWith('ko');
+})();
+const TEXT = ko
+  ? { msg: '사이트 이용 현황을 보기 위해 Google 애널리틱스 쿠키를 사용합니다.', yes: '허용', no: '거부' }
+  : { msg: 'We use Google Analytics cookies to see how the site is used.', yes: 'Accept', no: 'Decline' };
+
+declare global { interface Window { dataLayer?: unknown[]; gtag?: (...a: unknown[]) => void } }
+
+let loaded = false;
+function loadGA() {
+  if (!LIVE) return;
+  if (loaded) { window.gtag!('consent', 'update', { analytics_storage: 'granted' }); return; }
+  loaded = true;
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function () { window.dataLayer!.push(arguments); };
+  window.gtag('js', new Date());
+  window.gtag('config', GA_ID, { cookie_domain: location.hostname });
+  const s = document.createElement('script');
+  s.async = true; s.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
+  document.head.appendChild(s);
+}
+
+/** Withdrawn after accepting: stop GA and delete its cookies. */
+function stopGA() {
+  if (loaded) window.gtag!('consent', 'update', { analytics_storage: 'denied' });
+  for (const c of document.cookie.split(';')) {
+    const name = c.split('=')[0].trim();
+    if (!name.startsWith('_ga')) continue;
+    for (const d of [location.hostname, '.' + location.hostname.split('.').slice(-2).join('.'), '']) {
+      document.cookie = `${name}=; Max-Age=0; path=/${d ? '; domain=' + d : ''}`;
+    }
+  }
+}
+
+const STYLE = `
+.cc{position:fixed;left:16px;bottom:16px;z-index:2147483000;max-width:min(380px,calc(100vw - 32px));display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;padding:12px 14px;background:#fff;color:#202124;border:1px solid #dadce0;border-radius:12px;box-shadow:0 4px 16px rgb(0 0 0/.16);font:400 13px/1.45 -apple-system,'Segoe UI',Roboto,'Apple SD Gothic Neo',sans-serif}
+.cc p{margin:0;flex:1 1 200px}
+.cc div{display:flex;gap:8px;margin-left:auto}
+.cc button{font-family:inherit;font-weight:600;font-size:13px;line-height:1;padding:8px 14px;border-radius:8px;border:1px solid #dadce0;background:#fff;color:#1a73e8;cursor:pointer}
+.cc button:hover{background:#f1f3f4}
+.cc button.y{background:#1a73e8;border-color:#1a73e8;color:#fff}
+.cc button.y:hover{background:#1765cc}
+.cc button:focus-visible{outline:2px solid #1a73e8;outline-offset:2px}`;
+
+let el: HTMLElement | null = null;
+function show() {
+  if (el) return;
+  if (!document.getElementById('cc-css')) { const st = document.createElement('style'); st.id = 'cc-css'; st.textContent = STYLE; document.head.appendChild(st); }
+  el = document.createElement('div');
+  el.className = 'cc'; el.setAttribute('role', 'region'); el.setAttribute('aria-label', 'Cookies');
+  el.innerHTML = `<p>${TEXT.msg}</p><div><button type="button" class="n">${TEXT.no}</button><button type="button" class="y">${TEXT.yes}</button></div>`;
+  el.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest('button');
+    if (!b) return;
+    const c: Choice = b.classList.contains('y') ? 'granted' : 'denied';
+    save(c);
+    if (c === 'granted') loadGA(); else stopGA();
+    el!.remove(); el = null;
+  });
+  document.body.appendChild(el);
+}
+
+const choice = read();
+if (choice === 'granted') loadGA();
+else if (!choice) show();
+document.addEventListener('click', (e) => {
+  if (!(e.target as HTMLElement).closest('[data-consent]')) return;
+  e.preventDefault(); show();
+});
+
+export {};

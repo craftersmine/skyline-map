@@ -1,6 +1,7 @@
 // Showcase page behaviour. The page is complete without it: this only adds the comparison slider,
 // tabs, the section line's current stop and a lightbox for full-size screenshots.
 import './showcase.css';
+import '../consent';
 
 // Default ↔ Night comparison
 for (const fig of document.querySelectorAll<HTMLElement>('[data-compare]')) {
