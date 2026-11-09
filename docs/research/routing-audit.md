@@ -217,3 +217,39 @@ snapped to two roads that meet at a banned turn.
 
 The reference save has no connection leading onto a lane whose far end has custom arrows (section 4). The
 segment-level rule is therefore exact for it, but could over-permit in other cities.
+
+## 7. Phase 4 (lane-aware routing): measured, not built
+
+Phase 2's turn bans work per road: a turn is allowed if any arriving car lane allows it. Lane state could matter
+only where the game pins a car to particular lanes and those lanes can't make the next turn.
+
+- **Without lane connections,** TM:PE's default lane routing reaches the next road's lanes with a lane-change cost.
+  The lane a car arrives in therefore doesn't fix the lane it leaves from.
+- **With connections,** the car is held to the connected lanes. Measured on the latest matched save of each city
+  (`scratchpad/simtest/p4/lanedep.mts`): a road end counts when every arriving car lane has connections, the
+  connections reach only some lanes of the next road, and those lanes allow fewer exits at its far end than the road
+  as a whole.
+
+| City | Lane connections | Ends with connected lanes | Narrower lane set on the next road | Moves the per-road model allows wrongly |
+|---|---|---|---|---|
+| 서랑시 | 53 | 26 | 6 | 1 (34181 → 4840 → 22353) |
+| 스프링데일 | 5 | 4 | 2 | 1 (9295 → 34145 → 2051) |
+| 라스 크루즈 | 0 | 0 | 0 | 0 |
+| Quda City | 0 | 0 | 0 | 0 |
+
+The save's own trips agree with this reading. Of 8,594 road-vehicle paths in the 서랑시 save:
+- 3 drive 34181 → 4840;
+- 31 drive 4840 → 22353;
+- none chains the two.
+
+**Decision: not implemented.** The router's search state is one road and direction. Forbidding a three-road
+sequence exactly would mean splitting that state into road plus arrival lane (or plus previous road) in all six
+drive searches: driveSearch, driveSearchOn, nodeRoute, reachTimes and the timing paths. That is the large, fragile
+rewrite this phase was told to avoid, and it would fix two moves in four cities. Those two stay a documented
+over-permission.
+
+**Left-hand traffic:** none of the 133 readable saves on the test machine is left-hand (`m_invertTraffic`).
+Per-direction rules and turn bans stay off for left-hand cities, as before, until a save can be tested.
+
+**Lane-level speed:** the router keeps the fastest car lane's limit per direction (section 3). TM:PE lets each car
+choose its lane, so the fastest lane is what a car can reach; no change.

@@ -116,8 +116,8 @@ no TM:PE rule is used.
   export's limit stays.
 - **Left-hand traffic:** one-way and per-direction rules are skipped until a left-hand save has been tested.
 - **Lane arrows: only what holds for the whole road.** A turn is ruled out only when no arriving car lane allows it.
-  Sequences that need a particular lane (connected into a lane that can't make the next turn) are not modelled; see
-  docs/research/routing-audit.md, section 6.
+  Sequences that need a particular lane (connected into a lane that can't make the next turn) are not modelled:
+  measured at 2 such moves in 4 cities, not worth a lane-level router (docs/research/routing-audit.md, sections 6–7).
 - **Arrow turns left undecided:** turns sharper than 90° (live game paths contradict the reading of TM:PE there),
   toll-booth nodes, untouchable and beautification nodes, connections onto lanes that can't be placed, and saves with
   TM:PE's highway rules on (they rewrite arrows on highways at run time).
