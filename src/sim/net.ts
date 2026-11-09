@@ -8,6 +8,7 @@ const NL = 262144, NNODE = 32768, NSEG = 36864;
 export interface SaveNet {
   nodeCount: number;              // buffer size
   nodeFlags: Uint32Array;         // NetNode.m_flags per node id (0 = not in use); Created bit = 1
+  nodeFlags2: Uint32Array;        // NetNode.m_flags2 (PedestrianStreetTransition = 2, ...)
   nodeX: Float32Array; nodeY: Float32Array; nodeZ: Float32Array; // m_position (exact float32)
   segCount: number;
   segFlags: Uint32Array;          // NetSegment.m_flags (Created bit = 1)
@@ -35,9 +36,9 @@ export function readNet(sd: SaveData): SaveNet {
 
   // nodes: flags interleaved with flags2
   const nf = s.eaU32(2 * (NNODE - 1));
-  const nodeFlags = new Uint32Array(NNODE);
+  const nodeFlags = new Uint32Array(NNODE), nodeFlags2 = new Uint32Array(NNODE);
   let nn = 0;
-  for (let i = 1; i < NNODE; i++) if ((nodeFlags[i] = nf[2 * (i - 1)])) nn++;
+  for (let i = 1; i < NNODE; i++) { nodeFlags2[i] = nf[2 * (i - 1) + 1]; if ((nodeFlags[i] = nf[2 * (i - 1)])) nn++; }
   s.eaI64(2 * nn); s.eaU8(nn); s.eaU16(2 * nn); // problems, maxWaitTime, temp/finalCounter
   const nodeX = new Float32Array(NNODE), nodeY = new Float32Array(NNODE), nodeZ = new Float32Array(NNODE);
   for (let i = 1; i < NNODE; i++) {
@@ -90,7 +91,7 @@ export function readNet(sd: SaveData): SaveNet {
   s.eaI64(s.u24()); // adjustedSegments
   endSection(s, end, 'NetManager');
 
-  return { nodeCount: NNODE, nodeFlags, nodeX, nodeY, nodeZ, segCount: NSEG, segFlags: sf, segStart, segEnd, segPrefab,
+  return { nodeCount: NNODE, nodeFlags, nodeFlags2, nodeX, nodeY, nodeZ, segCount: NSEG, segFlags: sf, segStart, segEnd, segPrefab,
     segStartDir, segEndDir, segTraffic, segFirstLane, laneNext, prefabNames };
 }
 

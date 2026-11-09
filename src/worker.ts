@@ -21,6 +21,8 @@ const schemCache = new Map<string, unknown>();
 let lastHeight: { h: Float32Array; size: number } | null = null;
 let lastCity: CityData | null = null;
 let history: HistoryKeys | null = null;
+/** bumped by every sim load and clear: an older load that finishes late must not apply its rules */
+let simToken = 0;
 
 async function decode(buf: ArrayBuffer): Promise<string> {
   const head = new Uint8Array(buf, 0, Math.min(2, buf.byteLength));
@@ -97,11 +99,17 @@ self.onmessage = async (e: MessageEvent) => {
       // end i18n-keys
       if (!lastCity) { self.postMessage({ type: 'sim', id: msg.id, result: { ok: false, code: 'corrupt', detail: 'no map open' } }); return; }
       router?.clearRules();
-      const result = await loadSim(msg.buffer, lastCity, (step) => self.postMessage({ type: 'simProgress', id: msg.id, step }));
+      // parsing can await (gzip): remember what this load was for, so a stale one never applies its rules
+      const token = ++simToken, forRouter = router, forCity = lastCity;
+      const result = await loadSim(msg.buffer, forCity, (step) => self.postMessage({ type: 'simProgress', id: msg.id, step }));
       // a matched save's traffic rules drive routing from now on (directions, reach, closures, transit times)
-      if (result.ok) { if (result.rules && router) router.applyRules(result.rules); delete result.rules; }
+      if (result.ok) {
+        if (result.rules && router && router === forRouter && lastCity === forCity && token === simToken) router.applyRules(result.rules);
+        delete result.rules;
+      }
       self.postMessage({ type: 'sim', id: msg.id, result }, { transfer: transferables(result) });
     } else if (msg.type === 'simClear') {
+      simToken++;
       router?.clearRules();
     } else if (msg.type === 'lang') {
       setLang(msg.lang, false); // directions text is written in the UI language

@@ -95,32 +95,48 @@ cells mirrored north–south.
 
 ## Routing with the save's traffic rules
 
-A matched save also changes how Directions, "How far can I get?" and "What if it closes?" route. This applies
-to matched segments only (`src/sim/rules.ts`, `Router.applyRules`):
+A matched save also changes how Directions, "How far can I get?" and "What if it closes?" route. Rules apply to
+matched segments only (`src/sim/rules.ts`, `Router.applyRules`). A TM:PE rule applies only while the save's TM:PE
+options have that feature switched on (`TMPE_Options`, `readTmpeOptions`). If the options are missing or unknown,
+no TM:PE rule is used.
 
-| Rule | From | Effect |
+| Rule | From (game code) | Effect in the router |
 |---|---|---|
-| Exact one-way direction | lane direction (export) + the segment's `Invert` flag (save), the game's own rule (`PathFind.cs:779`) | replaces the inferred direction; never driven against |
-| TM:PE speed limit | per lane, else TM:PE's default for the road type, else the prefab limit | car speed per direction (the existing 85% town factor stays) |
-| TM:PE vehicle restriction | a direction where no car lane admits passenger cars | closed to driving |
-| TM:PE junction restriction | explicit "no U-turn" at a segment end | U-turn there forbidden |
-| TM:PE limits on transit pieces | lane and road-type limits for the vehicle riding them (e.g. metro tracks held to 60 km/h) | transit ride times |
+| Exact one-way direction | export lane direction + the save's segment `Invert` flag (`PathFind.cs:779`, `NetInfo.cs:1103`) | replaces the inferred direction; never driven against |
+| TM:PE speed limit | per lane, else TM:PE's road-type default, else the prefab limit (`SpeedLimitManager`), on lanes TM:PE can customise | fastest car-lane limit per direction (the router's 85% town factor stays) |
+| TM:PE vehicle restriction | a direction whose every car lane bars passenger cars (`CustomPathFind.CanUseLane`) | Strict aggression: banned. Low/Medium/High: TM:PE's own cost factor ×10/×100/×1000 while searching, never in the shown time |
+| U-turns | TM:PE junction restrictions on: explicit setting, else TM:PE's default (dead ends and one-way-out nodes; junctions only with "allow U-turns"). Off: only dead ends / one-way-out nodes | U-turn back along the segment forbidden where the game forbids it |
+| TM:PE limits on transit pieces | the same limits for the vehicle type riding the piece (e.g. metro tracks held to 60 km/h) | transit ride times |
 
-- **Not a speed:** traffic density never enters a travel time.
-- **Toggle:** Directions shows a "Traffic rules from my save" switch while rules are loaded, to compare
-  against the export alone. Removing the save restores the export-only router exactly.
-- **Left-hand traffic:** one-way and per-direction rules are skipped until a left-hand save has been tested;
-  the road-type transit limits and U-turn bans still apply.
-- **Effect in the test city:**
-  - 1,416 exact one-ways, 49 of which the inference had wrong;
-  - 107 roads with TM:PE limits, 10 roads closed to cars in a direction, 390 transit pieces;
-  - 103 of 150 random drives change;
-  - metro ride time rises 12%;
-  - one trip goes from 11 min via the toll expressway to 6 min on 서빛서랑대로.
-- **Checks (`check:sim`, section 3b):**
-  - no drive breaks a rule;
-  - "rules off" and cleared rules both reproduce the export-only routes byte for byte.
-- **Phase 2, not yet:** lane arrows and lane connections as turn restrictions (docs/research/routing-rules.md).
+**Not applied, with reasons:**
+- **Traffic density:** it never enters a travel time.
+- **U-turns without TM:PE:** the vanilla rule also turns vehicles back where the other segments lack the road's
+  vehicle categories. Those are prefab data the save doesn't hold, so U-turns stay as the router has them.
+- **"No limit" (TM:PE unlimited):** vehicles then drive at their own top speed, which isn't in the save, so the
+  export's limit stays.
+- **Left-hand traffic:** one-way and per-direction rules are skipped until a left-hand save has been tested.
+- **Lane arrows, lane connections, priority signs, turn-on-red:** not modelled. Phase 2 is assessed in
+  docs/research/routing-audit.md.
+
+**Toggle:** Directions shows a "Traffic rules from my save" switch while rules are loaded. Switching it off, or
+removing the save, gives exactly the export-only routes; reach and closures always use the rules while a save
+is loaded.
+
+**Effect in the test city** (TM:PE 11.9.4; speed limits, restrictions and junction restrictions on; U-turns off; aggression High):
+- 1,416 exact one-ways;
+- 98 roads with changed car limits;
+- 6 roads restricted for cars;
+- 7,206 segment ends where U-turns are forbidden;
+- 379 transit pieces;
+- metro ride time +12%;
+- one trip goes from 11 min via the toll expressway to 6 min on 서빛서랑대로.
+
+**Checks (`check:sim`, section 3b):**
+- no drive breaks a rule;
+- the option switches are honoured;
+- reported times exclude penalties;
+- "rules off" and cleared rules reproduce the export-only drive, reach and transit results byte for byte;
+- rules touch matched segments only, also for partial matches.
 
 ## Deliberately not shown
 

@@ -43,7 +43,7 @@ interface Edge {
   hA: number; hB: number;
   /** traffic rules from a matched save (see applyRules): car speed per direction a→b / b→a (m/s) */
   spd?: [number, number];
-  /** traffic rules from a matched save: closed to private cars a→b / b→a */
+  /** traffic rules from a matched save: every car lane a→b / b→a bars private cars (TM:PE); see restrictFactor */
   noCar?: [boolean, boolean];
 }
 
@@ -343,7 +343,7 @@ export class Router {
 
   private allowed(e: Edge, mode: Mode): boolean {
     if (e.x) return false;
-    if (mode === 'drive') return e.acc.drive && !(e.noCar?.[0] && e.noCar[1]);
+    if (mode === 'drive') return e.acc.drive && !(this.restrictBan && e.noCar?.[0] && e.noCar[1]);
     if (mode === 'walk' || mode === 'transit') return e.acc.walk;
     return e.acc.bike || e.acc.bikeWalk;
   }
@@ -528,12 +528,15 @@ export class Router {
     }
   }
   /** Inferred one-ways are rules; the last-resort search may break a likely (keep-right) one, never a confirmed one. */
-  private driveOk(e: Edge, fwd: boolean) { return this.allowed(e, 'drive') && !e.noCar?.[fwd ? 0 : 1] && !(e.ow !== 0 && e.sure && (fwd ? 1 : -1) !== e.ow && (!this.relaxed || e.confirmed)); }
+  private driveOk(e: Edge, fwd: boolean) { return this.allowed(e, 'drive') && !(this.restrictBan && e.noCar?.[fwd ? 0 : 1]) && !(e.ow !== 0 && e.sure && (fwd ? 1 : -1) !== e.ow && (!this.relaxed || e.confirmed)); }
   /** Time on the edge; against a likely-but-unproven one-way it is heavily penalised, never banned. */
   /** The fixed parts of driveCost (wrong-way penalty, 'Avoid tolls' gate hour): paid in full on any stretch of the edge. */
   private wrongWayFixed(e: Edge, fwd: boolean) { return (e.ow !== 0 && (fwd ? 1 : -1) !== e.ow ? (e.sure ? 600 : 90) : 0) + (this.avoidTolls && e.gate ? 3600 : 0); }
   private driveCost(e: Edge, fwd: boolean) {
-    const base = this.cost(e, 'drive', fwd) + (this.avoidTolls && e.gate ? 3600 : 0); // 'Avoid tolls': an hour per gate, so only unavoidable tolls remain
+    let base = this.cost(e, 'drive', fwd) + (this.avoidTolls && e.gate ? 3600 : 0); // 'Avoid tolls': an hour per gate, so only unavoidable tolls remain
+    // TM:PE vehicle restrictions below Strict: the restricted direction costs TM:PE's own factor while searching,
+    // never in the reported time (see driveTime)
+    if (!this.restrictBan && !this.timing && e.noCar?.[fwd ? 0 : 1]) base *= this.restrictFactor;
     if (e.ow !== 0 && (fwd ? 1 : -1) !== e.ow) return e.sure ? base * 30 + 600 : base * 6 + 90; // `sure` only reachable when relaxed
     return base;
   }
@@ -776,8 +779,8 @@ export class Router {
   }
   /** Travel time of a driving path including junction delays (without alternative-route penalties). */
   private driveTime(path: { e: number; fwd: boolean }[]) {
-    const avoid = this.avoidTolls; this.avoidTolls = false; // report real travel time, not the avoidance penalty
-    try { return this.driveTimeRaw(path); } finally { this.avoidTolls = avoid; }
+    const avoid = this.avoidTolls; this.avoidTolls = false; this.timing = true; // report real travel time, not the avoidance penalties
+    try { return this.driveTimeRaw(path); } finally { this.avoidTolls = avoid; this.timing = false; }
   }
   private driveTimeRaw(path: { e: number; fwd: boolean }[]) {
     let t = 0;
@@ -979,6 +982,12 @@ export class Router {
   private uturnRule = new Set<string>();
   private uturnBan = new Set<string>();
   private rulesOn = false;
+  /** TM:PE vehicle restrictions: banned (Strict) or a path-cost factor */
+  private restrictBan = true;
+  private restrictFactor = 1;
+  private restrictRule: number | null = null;
+  /** computing a reported travel time: search-only penalties are left out */
+  private timing = false;
 
   /**
    * Use the rules a matched save holds (sim/rules.ts): exact one-way directions, TM:PE speed limits and
@@ -988,7 +997,7 @@ export class Router {
   applyRules(r: SimRules) {
     this.clearRules();
     const byId = new Map(this.edges.map((e) => [e.id, e]));
-    const ids = new Set([...r.oneway.keys(), ...r.speed.keys(), ...r.carBan.keys()]);
+    const ids = new Set([...r.oneway.keys(), ...r.speed.keys(), ...r.carRestrict.keys()]);
     for (const id of ids) {
       const e = byId.get(id);
       if (!e) continue;
@@ -1001,7 +1010,7 @@ export class Router {
         const f = sp[0] ?? sp[1]!, b = sp[1] ?? sp[0]!;
         rule.spd = [f / 3.6, b / 3.6]; rule.speed = Math.max(f, b) / 3.6;
       }
-      const ban = r.carBan.get(id);
+      const ban = r.carRestrict.get(id);
       if (ban) rule.noCar = ban;
       this.ruleEdits.push({ e, base, rule });
     }
@@ -1019,11 +1028,12 @@ export class Router {
       }
     }
     for (const u of r.uturnBan) { const v = this.nodeIdx.get(u.node); if (v !== undefined) this.uturnRule.add(u.seg + ':' + v); }
+    this.restrictRule = r.restrictFactor;
     this.setRules(true);
   }
   clearRules() {
     this.setRules(false);
-    this.ruleEdits = []; this.hopEdits = []; this.uturnRule = new Set();
+    this.ruleEdits = []; this.hopEdits = []; this.uturnRule = new Set(); this.restrictRule = null;
   }
   /** what the applied rules changed, for the page */
   rulesSummary() { return { edges: this.ruleEdits.length, hops: this.hopEdits.length, uturns: this.uturnRule.size }; }
@@ -1032,6 +1042,7 @@ export class Router {
     for (const x of this.ruleEdits) Object.assign(x.e, on ? x.rule : x.base);
     for (const x of this.hopEdits) x.h.time = on ? x.rule : x.base;
     this.uturnBan = on ? this.uturnRule : new Set();
+    this.restrictBan = !on || this.restrictRule === null; this.restrictFactor = on && this.restrictRule !== null ? this.restrictRule : 1;
     this.rulesOn = on;
     // access may have changed: rebuild components and junction degrees lazily
     this.comps.clear(); this.degree.clear();

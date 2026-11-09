@@ -266,8 +266,8 @@ export function createSim(map: MLMap, deps: { worker: Worker; city: () => BuiltC
     const parts = [
       r.oneway ? tn(r.oneway, '{n} one-way road', '{n} one-way roads') : '',
       r.speed ? tn(r.speed, '{n} road with a TM:PE speed limit', '{n} roads with TM:PE speed limits') : '',
-      r.carBan ? tn(r.carBan, '{n} road closed to cars in a direction', '{n} roads closed to cars in a direction') : '',
-      r.uturnBan ? tn(r.uturnBan, '{n} no-U-turn rule', '{n} no-U-turn rules') : '',
+      r.carRestrict ? (r.restrictBan ? tn(r.carRestrict, '{n} road closed to cars in a direction', '{n} roads closed to cars in a direction') : tn(r.carRestrict, '{n} road restricted for cars (used only if there is no other way)', '{n} roads restricted for cars (used only if there is no other way)')) : '',
+      r.uturnBan ? tn(r.uturnBan, '{n} place where U-turns are not allowed', '{n} places where U-turns are not allowed') : '',
       r.track ? tn(r.track, '{n} track or road with a TM:PE limit for transit', '{n} tracks or roads with TM:PE limits for transit') : '',
     ].filter(Boolean);
     if (!parts.length) return '';

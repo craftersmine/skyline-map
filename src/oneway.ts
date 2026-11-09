@@ -8,7 +8,7 @@
 //     - where exactly two one-way pieces meet, traffic enters one and leaves the other;
 //     - at a merge/diverge Y, the two branches share a direction, the trunk is opposite.
 //  2. Each group is then oriented by the strongest evidence it contains:
-//     transit routes (vehicles really drove it) > keep-right rule on divided
+//     transit routes (vehicles really drove it; walking tours excluded) > keep-right rule on divided
 //     roads (~95%/segment, majority per group) > the raw lane value.
 // See `npm run check:oneway` for the accuracy test against transit routes.
 import type { CityData, CSeg } from './parse';
@@ -44,9 +44,13 @@ export function inferOneWay(city: CityData, opts: { hideTruth?: Set<number> } = 
   const ow = [...kind.keys()];
 
   // ---- ground truth from transit paths (ordered segment lists vehicles drove)
+  // Walking tours (build.ts modeOf → 'tour') are on foot: pedestrians use one-way roads in both directions, so their
+  // paths say nothing about the driving direction. Their route segments are left out.
+  const onFoot = new Set<string>();
+  for (const t of city.transports) if (/Pedestrian|Tour|Walking/i.test(t.type) && !/Metro|Subway|Train|Tram|Monorail|Ship|Ferry|Cable|Bus|Trolley|Evacuation|Taxi/i.test(t.type)) t.stops.forEach((a, i) => onFoot.add(a + ',' + t.stops[(i + 1) % t.stops.length]));
   const votes = new Map<number, number>();
   for (const p of segs) {
-    if (!p.path) continue;
+    if (!p.path || onFoot.has(p.sn + ',' + p.en)) continue;
     const seq = p.path.filter((id, i) => (i === 0 || id !== p.path![i - 1]) && byId.has(id));
     const stop = nodes.get(p.sn);
     seq.forEach((id, k) => {

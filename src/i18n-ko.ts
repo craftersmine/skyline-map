@@ -808,8 +808,10 @@ export const KO: Record<string, string> = {
   "{n} roads with TM:PE speed limits": "TM:PE 제한 속도 도로 {n}개",
   "{n} road closed to cars in a direction": "한 방향 이상 승용차 통행 금지 도로 {n}개",
   "{n} roads closed to cars in a direction": "한 방향 이상 승용차 통행 금지 도로 {n}개",
-  "{n} no-U-turn rule": "유턴 금지 {n}곳",
-  "{n} no-U-turn rules": "유턴 금지 {n}곳",
   "{n} track or road with a TM:PE limit for transit": "대중교통 TM:PE 제한 속도 선로·도로 {n}개",
   "{n} tracks or roads with TM:PE limits for transit": "대중교통 TM:PE 제한 속도 선로·도로 {n}개",
+  "{n} road restricted for cars (used only if there is no other way)": "승용차 통행 제한 도로 {n}개(다른 길이 없을 때만 이용)",
+  "{n} roads restricted for cars (used only if there is no other way)": "승용차 통행 제한 도로 {n}개(다른 길이 없을 때만 이용)",
+  "{n} place where U-turns are not allowed": "유턴 금지 지점 {n}곳",
+  "{n} places where U-turns are not allowed": "유턴 금지 지점 {n}곳",
 };

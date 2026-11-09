@@ -28,7 +28,37 @@ export interface JunctionFlags {
   pedestrianCrossingAllowed: boolean | null;
 }
 
+/**
+ * The save's TM:PE feature switches and policies (the 'TMPE_Options' blob, OptionsManager.SaveData: one byte per
+ * option at a fixed index). TM:PE only applies a rule kind while its feature is enabled; missing bytes keep
+ * TM:PE's built-in default, which we don't assume, so a too-short blob gives null.
+ */
+export interface TmpeOptions {
+  /** byte 13: U-turns allowed at junctions by default (JunctionRestrictionsManager.GetDefaultUturnAllowed) */
+  allowUTurns: boolean;
+  /** byte 20: lane speed limits and road-type defaults are applied (SpeedLimitManager.GetGameSpeedLimit) */
+  customSpeedLimits: boolean;
+  /** byte 21: vehicle restrictions are applied (CustomPathFind.CanUseLane) */
+  vehicleRestrictions: boolean;
+  /** byte 22: lane connector */
+  laneConnector: boolean;
+  /** byte 24: junction restrictions (U-turns, lane changes…) are applied */
+  junctionRestrictions: boolean;
+  /** byte 35: 0 Low, 1 Medium, 2 High, 3 Strict. Below Strict a restricted lane costs ×10/×100/×1000, it isn't banned */
+  restrictionsAggression: 0 | 1 | 2 | 3;
+}
+
+export function readTmpeOptions(blob: Uint8Array | undefined): TmpeOptions | null {
+  if (!blob || blob.length < 36) return null;
+  const on = (i: number) => blob[i] !== 0;
+  const ag = blob[35];
+  if (ag > 3) return null; // not a value this TM:PE version writes: don't guess
+  return { allowUTurns: on(13), customSpeedLimits: on(20), vehicleRestrictions: on(21), laneConnector: on(22), junctionRestrictions: on(24), restrictionsAggression: ag as 0 | 1 | 2 | 3 };
+}
+
 export interface TmpeData {
+  /** feature switches; null when the options blob is missing or too short (then no TM:PE rule is applied to routing) */
+  options: TmpeOptions | null;
   /** Configuration.Version (3 = current; < 2 means lane connections are bidirectional) */
   version: number | null;
   /** TM:PE assembly version that wrote the save, e.g. "11.9.4.25100" */
@@ -178,5 +208,5 @@ export function readTmpe(modData: Map<string, Uint8Array>): TmpeData | null {
     return { segment: num(f.segmentId, 'segmentId'), start: junction(f.startNodeFlags), end: junction(f.endNodeFlags) };
   });
 
-  return { version, modVersion, speedLimits, customDefaultSpeedLimits, parking, laneArrows, laneConnections, vehicleRestrictions, prioritySigns, junctionRestrictions };
+  return { options: readTmpeOptions(modData.get('TMPE_Options')), version, modVersion, speedLimits, customDefaultSpeedLimits, parking, laneArrows, laneConnections, vehicleRestrictions, prioritySigns, junctionRestrictions };
 }

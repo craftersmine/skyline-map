@@ -88,13 +88,17 @@ async function main() {
   console.log('\n3b. Routing rules from the save');
   {
     const rules = buildRules(c, net, validate(c, net, bld, null).m.seg, readTmpe(sd.modData), sd.leftHandTraffic);
-    check(rules.summary.oneway > 1000 && rules.summary.speed > 50 && rules.summary.carBan > 0 && rules.summary.track > 0, `rules built: ${JSON.stringify(rules.summary)}`);
+    check(rules.summary.oneway > 1000 && rules.summary.speed > 50 && rules.summary.carRestrict > 0 && rules.summary.track > 0, `rules built: ${JSON.stringify(rules.summary)}`);
     const ow = inferOneWay(c), tolls = detectTolls(c), built = buildCity(c, undefined, ow, tolls);
     const plain = new Router(c, built.stopNames ?? new Map(), ow, tolls);
     const ruled = new Router(c, built.stopNames ?? new Map(), ow, tolls);
     ruled.applyRules(rules);
     const edges = (ruled as any).edges as { id: number; a: number; b: number; ow: number; confirmed: boolean; pts: [number, number][]; acc: { drive: boolean }; noCar?: [boolean, boolean] }[];
     check(edges.every((e) => !rules.oneway.has(e.id) || (e.ow === rules.oneway.get(e.id) && e.confirmed)), `every matched one-way edge follows the save's exact direction (${rules.oneway.size})`);
+    // export-only inference: evidence from transit vehicles must agree with the save (walking tours aren't evidence)
+    const truthBad = [...ow.truth].filter(([id, d]) => rules.oneway.has(id) && rules.oneway.get(id) !== d).length;
+    const confirmedBad = [...ow.dir].filter(([id, d]) => ow.source.get(id) === 'transit' && rules.oneway.has(id) && rules.oneway.get(id) !== d).length;
+    check(truthBad === 0 && confirmedBad === 0, `export-only one-ways: every transit-backed direction agrees with the save (${ow.truth.size} votes, ${truthBad} wrong; ${confirmedBad} wrong "confirmed" segments)`);
     let seed = 11; const rnd = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 2 ** 32);
     const drivable = edges.filter((e) => e.acc.drive);
     const ends: [number, number][][] = [];
@@ -133,6 +137,31 @@ async function main() {
     const metroPlain = ((plain as any).lines as { mode: string; hops: { time: number }[] }[]).filter((l) => l.mode === 'metro');
     const tR = metro.reduce((s, l) => s + l.hops.reduce((a, h) => a + h.time, 0), 0), tP = metroPlain.reduce((s, l) => s + l.hops.reduce((a, h) => a + h.time, 0), 0);
     check(rules.summary.track > 0 ? tR > tP : true, `metro ride times follow TM:PE's track limits: ${Math.round(tP)} s → ${Math.round(tR)} s over all metro hops`);
+    // TM:PE options decide what applies (this save: speed limits, restrictions and junction rules on; U-turns off; aggression High)
+    const tm = readTmpe(sd.modData)!;
+    check(!!tm.options && tm.options.customSpeedLimits && tm.options.vehicleRestrictions && tm.options.junctionRestrictions && !tm.options.allowUTurns && tm.options.restrictionsAggression === 2, `TM:PE options read from the save: ${JSON.stringify(tm.options)}`);
+    check(rules.restrictFactor === 1000 && !rules.summary.restrictBan, 'High aggression: restricted car lanes cost ×1000 (TM:PE PATHFIND_PENALTIES), not a ban');
+    const noSpeed = buildRules(c, net, validate(c, net, bld, null).m.seg, { ...tm, options: { ...tm.options!, customSpeedLimits: false, vehicleRestrictions: false } }, false);
+    check(noSpeed.speed.size === 0 && noSpeed.trackLimit.size === 0 && noSpeed.carRestrict.size === 0, 'with TM:PE speed limits and restrictions switched off in the save, none are applied');
+    const noOpts = buildRules(c, net, validate(c, net, bld, null).m.seg, { ...tm, options: null }, false);
+    check(noOpts.speed.size === 0 && noOpts.uturnBan.length === 0 && noOpts.carRestrict.size === 0 && noOpts.oneway.size === rules.oneway.size, 'unknown TM:PE options: no TM:PE rule applied (exact one-ways still are)');
+    // reported drive times never include the restriction penalty
+    let inflated = 0;
+    for (const [p, q] of ends.slice(0, 60)) {
+      const r = (ruled as any).driveRoute(p, q, new Map()) as { path: { e: number; fwd: boolean }[]; time: number } | null;
+      if (r && r.path.some((st) => edges[st.e].noCar?.[st.fwd ? 0 : 1]) && r.time > 1e5) inflated++;
+    }
+    check(inflated === 0, 'reported times never include the ×1000 restriction penalty');
+    check(rules.summary.uturnBan > 0, `U-turns banned where TM:PE forbids them: ${rules.summary.uturnBan} segment ends`);
+    // clearing restores reach and transit exactly too
+    const ruled3 = new Router(c, built.stopNames ?? new Map(), ow, tolls); ruled3.applyRules(rules); ruled3.clearRules();
+    let reachSame = 0, transitSame = 0;
+    for (const [p, q] of ends.slice(0, 15)) {
+      const a = plain.reachTimes(p, 'drive', 1800), b = ruled3.reachTimes(p, 'drive', 1800);
+      if (a.length === b.length && a.every((v, i) => v === b[i])) reachSame++;
+      if (JSON.stringify(plain.route(p, q, 'transit')) === JSON.stringify(ruled3.route(p, q, 'transit'))) transitSame++;
+    }
+    check(reachSame === 15 && transitSame === 15, `after clearing, reach (${reachSame}/15) and transit routes (${transitSame}/15) equal the export-only router`);
   }
 
   console.log('\n4–5. Export and save from different moments');
@@ -147,8 +176,11 @@ async function main() {
     const v = rr.ok ? rr.v : rr.v;
     check(!!v && v.verdict === want, `${label}: ${v?.verdict} (${v?.reason}), worst share ${v ? Math.min(v.share.nodes, v.share.segments, v.share.buildings).toFixed(3) : '?'}`);
     if (rr.ok && rr.traffic) {
-      // per-object guard: everything attached is individually verified
+      // per-object guard: everything attached is individually verified, rules included
       const { m } = validate(city(ef), readNetOf(sf), readBldOf(sf), null);
+      const sdx = readSd(sf), rl = buildRules(city(ef), readNet(sdx), m.seg, readTmpe(sdx.modData), sdx.leftHandTraffic);
+      const ruleSegs = [...rl.oneway.keys(), ...rl.speed.keys(), ...rl.carRestrict.keys(), ...rl.trackLimit.keys(), ...rl.uturnBan.map((u) => u.seg)];
+      check(ruleSegs.every((id) => m.seg[id] === 1), `${label}: routing rules only on matched segments (${new Set(ruleSegs).size} segments)`);
       check([...rr.traffic.ids].every((id) => m.seg[id] === 1) && [...(rr.buildings?.ids ?? [])].every((id) => m.bld[id] === 1), `${label}: values attached only to matched objects (${rr.traffic.ids.length} roads, ${rr.buildings?.ids.length ?? 0} buildings)`);
     }
   }
