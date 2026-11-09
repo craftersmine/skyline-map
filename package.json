@@ -1,0 +1,36 @@
+{
+  "name": "skyline-atlas",
+  "version": "1.0.0",
+  "description": "Google-Maps-quality viewer for Cities: Skylines CSLMapView exports",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc",
+    "check": "node src/geo.check.ts && node src/context.check.ts",
+    "check:oneway": "tsx tools/oneway-check.ts",
+    "deploy": "npm run build && wrangler deploy",
+    "check:access": "tsx tools/access-check.ts",
+    "check:districts": "tsx tools/district-check.ts",
+    "check:transit": "tsx tools/transit-check.ts",
+    "check:schematic": "tsx tools/schematic-check.ts",
+    "check:i18n": "tsx tools/i18n-check.ts",
+    "check:tolls": "tsx tools/toll-check.ts",
+    "check:groups": "tsx tools/group-check.ts",
+    "check:route-geometry": "tsx tools/route-geometry-check.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "maplibre-gl": "^6.17.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "pretendard": "^1.3.9",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.6"
+  },
+  "private": true
+}

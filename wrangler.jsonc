@@ -1,0 +1,8 @@
+{
+  // Static deploy of the built app to Cloudflare (Workers static assets).
+  // npm run deploy  →  https://skyline.codz.me
+  "name": "skyline-atlas",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./dist", "not_found_handling": "404-page" },
+  "routes": [{ "pattern": "skyline.codz.me", "custom_domain": true }]
+}
