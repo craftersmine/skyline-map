@@ -37,6 +37,10 @@ verdict). Measurements: scratchpad `simtest/rules.ts`. The sections below are th
 
 ## Traffic density is not speed
 
+**Superseded (2026-11-10):** no game formula maps density to speed. But the cars saved with the city do give the
+relation, measured and validated in [traffic-model.md](traffic-model.md). It now drives an optional, labelled
+"Traffic-aware routing" switch. The section below is the original reasoning.
+
 `m_trafficDensity` is the share of a segment's capacity used in the last simulation interval
 (`RoadBaseAI.SimulationStep`: buffer × 100 / capacity, moved ±5 per step). The game uses it only to colour
 the traffic view and for noise. Nothing maps it to vehicle speed, so it must not change travel times.

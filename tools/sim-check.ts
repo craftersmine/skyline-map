@@ -17,6 +17,7 @@ import { validate } from '../src/sim/validate';
 import { buildRules } from '../src/sim/rules';
 import { readTmpe } from '../src/sim/tmpe';
 import { Router } from '../src/router';
+import { trafficFactor } from '../src/sim/traffic';
 import { buildCity } from '../src/build';
 import { inferOneWay } from '../src/oneway';
 import { detectTolls } from '../src/tolls';
@@ -199,6 +200,73 @@ async function main() {
       if (JSON.stringify(plain.route(p, q, 'transit')) === JSON.stringify(ruled3.route(p, q, 'transit'))) transitSame++;
     }
     check(reachSame === 15 && transitSame === 15, `after clearing, reach (${reachSame}/15) and transit routes (${transitSame}/15) equal the export-only router`);
+  }
+
+  console.log('\n3c. Traffic-aware routing (estimate from the save\'s densities)');
+  {
+    const f = Array.from({ length: 101 }, (_, d) => trafficFactor(d));
+    check(f[0] === 1 && f.every((v, i) => v >= 1 && v <= 3.57 && (i === 0 || v >= f[i - 1])) && trafficFactor(NaN) === 1, `density → time factor is ≥ 1, capped, non-decreasing (1 at 0–5 %, ${f[50].toFixed(2)} at 50 %, ${f[80].toFixed(2)} at 80 %, ${f[100].toFixed(2)} at 100 %)`);
+    const rules = buildRules(c, net, validate(c, net, bld, null).m.seg, readTmpe(sd.modData), sd.leftHandTraffic);
+    const ow = inferOneWay(c), tolls = detectTolls(c), built = buildCity(c, undefined, ow, tolls);
+    const mk = () => { const x = new Router(c, built.stopNames ?? new Map(), ow, tolls); x.applyRules(rules); return x; };
+    const base = mk(), tr = mk();
+    tr.applyTraffic(r.traffic!.ids, r.traffic!.pct);
+    const edges = (tr as any).edges as { id: number; tf?: number; acc: { drive: boolean }; pts: [number, number][] }[];
+    const verified = new Set(r.traffic!.ids);
+    check(edges.every((e) => e.tf === undefined || (verified.has(e.id) && e.acc.drive)), `traffic factors only on matched drivable roads (${edges.filter((e) => e.tf !== undefined).length} roads)`);
+    let seed = 7; const rnd = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 2 ** 32);
+    const drivable = edges.filter((e) => e.acc.drive);
+    const ends: [number, number][][] = [];
+    for (let k = 0; k < 120; k++) { const a = drivable[Math.floor(rnd() * drivable.length)], b = drivable[Math.floor(rnd() * drivable.length)]; ends.push([a.pts[a.pts.length >> 1], b.pts[b.pts.length >> 1]]); }
+    // switched off (the default), nothing changes
+    let offSame = 0;
+    for (const [p, q] of ends.slice(0, 40)) if (JSON.stringify(base.route(p, q, 'drive')) === JSON.stringify(tr.route(p, q, 'drive'))) offSame++;
+    check(offSame === 40, `traffic loaded but switched off: drive routes identical (${offSame}/40)`);
+    tr.setTraffic(true);
+    // switched on: never faster than without; the comparison time is the same route without traffic; rules still hold
+    let found = 0, slower = 0, pathChanged = 0, badCmp = 0, faster = 0, illegal = 0;
+    const nodeOf = (tr as any).nodeIdx as Map<number, number>;
+    const uBan = new Set(rules.uturnBan.map((u) => u.seg + ':' + nodeOf.get(u.node))), tBan = new Set(rules.turnBan.map((b) => b.from + ':' + nodeOf.get(b.node) + ':' + b.to));
+    for (const [p, q] of ends) {
+      const a = base.route(p, q, 'drive')[0], b = tr.route(p, q, 'drive')[0];
+      if (!a || !b) { if (!!a !== !!b) illegal++; continue; }
+      found++;
+      if (b.baseTime === undefined || b.trafficShare === undefined || b.time < b.baseTime - 1e-6) badCmp++;
+      // the traffic route can't beat the best route without traffic, up to the search's own access costing (joining
+      // a road farther out counts double while searching, once in the shown time)
+      if (b.baseTime! < a.time - Math.max(15, 0.03 * a.time)) faster++;
+      if (b.time > a.time + 30) slower++;
+      const same = JSON.stringify(a.legs.map((l) => l.coords)) === JSON.stringify(b.legs.map((l) => l.coords));
+      if (!same) pathChanged++;
+      else if (Math.abs(b.baseTime! - a.time) > 1e-6) badCmp++;
+      const path = ((tr as any).driveRoute(p, q, new Map()) as { path: { e: number; fwd: boolean }[] } | null)?.path ?? [];
+      path.forEach((st, i) => {
+        const e = (tr as any).edges[st.e], o = rules.oneway.get(e.id), prev = path[i - 1];
+        if (o !== undefined && (st.fwd ? 1 : -1) !== o) illegal++;
+        if (prev && prev.e === st.e && uBan.has(e.id + ':' + (prev.fwd ? e.b : e.a))) illegal++;
+        if (prev && i > 1 && prev.e !== st.e && tBan.has((tr as any).edges[prev.e].id + ':' + (prev.fwd ? (tr as any).edges[prev.e].b : (tr as any).edges[prev.e].a) + ':' + e.id)) illegal++;
+      });
+    }
+    check(found > 100 && badCmp === 0 && faster === 0, `traffic on: ${found} drives; the without-traffic time is the same route's, never better than the best route without traffic`);
+    check(illegal === 0, 'traffic never overrides a rule: no one-way, U-turn or lane-arrow ban broken, no trip lost or gained');
+    check(slower > 0 && pathChanged > 0, `traffic changes ETAs and paths: ${slower} drives at least 30 s slower, ${pathChanged} take another way`);
+    // other modes are untouched
+    let other = 0;
+    for (const [p, q] of ends.slice(0, 12)) for (const m of ['walk', 'bike', 'transit'] as const) if (JSON.stringify(base.route(p, q, m)) === JSON.stringify(tr.route(p, q, m))) other++;
+    check(other === 36, `walking, cycling and transit unchanged with traffic on (${other}/36)`);
+    // reach follows the same switch: every node is reached no sooner than without traffic
+    let early = 0, reachCmp = 0;
+    for (const [p] of ends.slice(0, 8)) {
+      const a = base.reachTimes(p, 'drive', 1800), b = tr.reachTimes(p, 'drive', 1800);
+      for (let i = 0; i < a.length; i++) { if (b[i] < a[i] - 1e-6) early++; if (Number.isFinite(b[i])) reachCmp++; }
+    }
+    check(early === 0 && reachCmp > 1000, `reach with traffic: no node reached sooner than without (${reachCmp} node times)`);
+    tr.setTraffic(false);
+    let restored = 0;
+    for (const [p, q] of ends.slice(0, 30)) if (JSON.stringify(base.route(p, q, 'drive')) === JSON.stringify(tr.route(p, q, 'drive'))) restored++;
+    tr.setTraffic(true); tr.clearTraffic();
+    for (const [p, q] of ends.slice(30, 45)) if (JSON.stringify(base.route(p, q, 'drive')) === JSON.stringify(tr.route(p, q, 'drive'))) restored++;
+    check(restored === 45, `switching traffic off, or removing it, restores the routes exactly (${restored}/45)`);
   }
 
   console.log('\n4–5. Export and save from different moments');

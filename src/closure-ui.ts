@@ -51,7 +51,14 @@ const ICON: Record<string, string> = {
 };
 const svg = (d: string) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="${d}"/></svg>`;
 
-export function createClosure(map: MLMap, deps: { worker: Worker; land: () => DistrictField | null; night: () => boolean; onOpen: () => void; toast: (m: string) => void }) {
+// i18n-keys: closure notes
+void ['Uses the export\'s network and the same routing as Directions. Lines through the closure are cut there; nothing reroutes them. No traffic or passenger numbers are involved: the export has none.', 'Uses the export\'s network and the same routing as Directions, with the traffic from your save as an estimate. Lines through the closure are cut there; nothing reroutes them.'];
+// end i18n-keys
+export function createClosure(map: MLMap, deps: { worker: Worker; land: () => DistrictField | null; night: () => boolean; onOpen: () => void; toast: (m: string) => void; traffic: () => boolean }) {
+  /** traffic-aware routing (switched in Directions) changes the drive times shown here */
+  const note = () => deps.traffic()
+    ? t('Uses the export\'s network and the same routing as Directions, with the traffic from your save as an estimate. Lines through the closure are cut there; nothing reroutes them.')
+    : t('Uses the export\'s network and the same routing as Directions. Lines through the closure are cut there; nothing reroutes them. No traffic or passenger numbers are involved: the export has none.');
   const st = {
     active: false, pick: null as ClosurePick | null, res: null as ClosureResult | null, busy: false, id: 0, sel: 0,
     rmode: 'drive' as RMode, view: 'change' as View, pin: null as LL | null, grids: null as { before: ReachGrid | null; after: ReachGrid | null } | null, rbusy: false, rid: 0, fit: false,
@@ -97,7 +104,7 @@ export function createClosure(map: MLMap, deps: { worker: Worker; land: () => Di
     if (!r) {
       el.innerHTML = `${head}<div class="cl-scroll"><p class="cl-lede">${st.busy ? t('Closing it…') : t('Tap a road, bridge, tunnel, railway or station on the map to close it.')}</p>
         ${st.busy ? '' : `<ul class="cl-kinds"><li>${svg(ICON.drive)}${t('Roads and bridges')}</li><li>${svg(ICON.transit)}${t('Railways and tunnels')}</li><li><i class="cl-dot st"></i>${t('Stations')}</li></ul>`}
-        <p class="cl-note">${t('Uses the export\'s network and the same routing as Directions. Lines through the closure are cut there; nothing reroutes them. No traffic or passenger numbers are involved: the export has none.')}</p></div>`;
+        <p class="cl-note">${note()}</p></div>`;
       return;
     }
     const [vh, vs] = VERDICT[r.verdict];
@@ -140,7 +147,7 @@ export function createClosure(map: MLMap, deps: { worker: Worker; land: () => Di
       <div class="cl-seg view" role="radiogroup">${(['before', 'after', 'change'] as View[]).map((v) => `<button role="radio" aria-checked="${st.view === v}" data-view="${v}">${t(v === 'change' ? 'Change' : v === 'before' ? 'Before' : 'After')}</button>`).join('')}</div>
       ${legend}${reachStats}
       <p class="cl-muted">${t('Drag the pin to start somewhere else.')}</p>
-      <p class="cl-note">${t('Uses the export\'s network and the same routing as Directions. Lines through the closure are cut there; nothing reroutes them. No traffic or passenger numbers are involved: the export has none.')}</p>
+      <p class="cl-note">${note()}</p>
       </div>`;
   }
 

@@ -47,6 +47,8 @@ export interface DirectionsDeps {
   showOnSchematic: (r: Route) => void;
   /** a matched save's traffic rules are loaded in the worker's router (see sim/rules.ts) */
   simRules: () => boolean;
+  /** a matched save's traffic densities are loaded in the worker's router (see sim/traffic.ts) */
+  simTraffic: () => boolean;
 }
 
 export function createDirections(d: DirectionsDeps) {
@@ -69,7 +71,7 @@ export function createDirections(d: DirectionsDeps) {
       <button class="icon-btn dir-swap" title="Reverse starting point and destination" aria-label="Swap" data-i18n-title="Reverse starting point and destination" data-i18n-aria="Swap">${svg('<path d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3 5 6.99h3V14h2V6.99h3L9 3z"/>')}</button>
       <div class="dir-suggest" hidden></div>
     </div>
-    <div class="dir-options"><label><input type="checkbox" id="dirAvoidTolls" /> <span data-i18n="Avoid tolls">Avoid tolls</span></label><label id="dirRulesRow" hidden title="One-way directions, TM:PE speed limits, car restrictions, U-turn bans and lane-arrow turns from your save" data-i18n-title="One-way directions, TM:PE speed limits, car restrictions, U-turn bans and lane-arrow turns from your save"><input type="checkbox" id="dirRules" checked /> <span data-i18n="Traffic rules from my save">Traffic rules from my save</span></label></div>
+    <div class="dir-options"><label><input type="checkbox" id="dirAvoidTolls" /> <span data-i18n="Avoid tolls">Avoid tolls</span></label><label id="dirRulesRow" hidden title="One-way directions, TM:PE speed limits, car restrictions, U-turn bans and lane-arrow turns from your save" data-i18n-title="One-way directions, TM:PE speed limits, car restrictions, U-turn bans and lane-arrow turns from your save"><input type="checkbox" id="dirRules" checked /> <span data-i18n="Traffic rules from my save">Traffic rules from my save</span></label><label id="dirTrafficRow" hidden title="Slows each road by how busy it was in your saved city" data-i18n-title="Slows each road by how busy it was in your saved city"><input type="checkbox" id="dirTraffic" /> <span data-i18n="Traffic-aware routing">Traffic-aware routing</span></label><p class="dir-traffic-note" hidden data-i18n="Traffic as it was in your saved city, not live GPS. Times with traffic are estimates.">Traffic as it was in your saved city, not live GPS. Times with traffic are estimates.</p></div>
     </div>
     <div class="dir-sheet"><div class="dir-body"></div></div>`;
   document.body.appendChild(el);
@@ -85,7 +87,7 @@ export function createDirections(d: DirectionsDeps) {
   });
 
   const st = {
-    from: null as Place | null, to: null as Place | null, mode: 'drive' as Mode, avoidTolls: false, rules: true,
+    from: null as Place | null, to: null as Place | null, mode: 'drive' as Mode, avoidTolls: false, rules: true, traffic: false,
     results: {} as Partial<Record<Mode, Route[]>>, sel: 0, req: 0, active: 'to' as 'from' | 'to', expanded: false,
   };
 
@@ -228,7 +230,7 @@ export function createDirections(d: DirectionsDeps) {
       ? `${transfers > 0 ? tn(transfers, '{n} transfer', '{n} transfers') + ' · ' : ''}${t('{dist} walk', { dist: fmtDist(r.legs.filter((l) => l.kind === 'walk').reduce((a, l) => a + l.dist, 0)) })} · ${t('incl. ~{time} est. wait', { time: fmtTime(r.legs.reduce((a, l) => a + (l.wait ?? 0), 0)) })}`
       : (r.via ? esc(t('via {road}', { road: r.via })) : i === 0 ? t('Fastest route') : t('Alternative route'))
         + (r.tolls?.length ? `<div class="toll-note${r.tollsUnavoidable ? ' warn' : ''}">${r.tollsUnavoidable ? t('Tolls can’t be avoided on this trip') : t('This route has tolls')} · ${tollSummary(P.tollCost(r)!)}</div>` : '')
-        + onewayNote(r);
+        + onewayNote(r) + trafficNote(r);
     return `<div class="dir-card${on ? ' on' : ''}" data-idx="${i}">
       <div class="dc-icon">${svg(icon)}</div>
       <div class="dc-main">${chips}<div class="dc-sub">${sub}</div>${on && !st.expanded ? `<button class="dc-details" data-details>${t('Details')}</button>` : ''}</div>
@@ -237,7 +239,7 @@ export function createDirections(d: DirectionsDeps) {
   }
 
   function details(r: Route): string {
-    const head = `<div class="dd-head"><button class="icon-btn" data-back aria-label="${t('Back')}">${svg('<path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/>')}</button><div><b>${fmtTime(r.time)}</b> <span class="muted">(${fmtDist(r.dist)})</span>${r.via ? `<div class="muted small">${esc(t('via {road}', { road: r.via }))}</div>` : ''}${r.tolls?.length ? tollDetails(r) : ''}${onewayNote(r, true)}</div></div>`;
+    const head = `<div class="dd-head"><button class="icon-btn" data-back aria-label="${t('Back')}">${svg('<path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/>')}</button><div><b>${fmtTime(r.time)}</b> <span class="muted">(${fmtDist(r.dist)})</span>${r.via ? `<div class="muted small">${esc(t('via {road}', { road: r.via }))}</div>` : ''}${r.tolls?.length ? tollDetails(r) : ''}${onewayNote(r, true)}${trafficNote(r)}</div></div>`;
     if (r.mode !== 'transit') return head + `<ol class="steps">${r.legs[0].steps.map(stepRow).join('')}</ol>`;
     const rows: string[] = [`<li class="tr-place"><i class="dot o"></i><b>${esc(st.from!.label)}</b></li>`];
     r.legs.forEach((l, i) => {
@@ -261,6 +263,14 @@ export function createDirections(d: DirectionsDeps) {
     return head + `<ol class="transit-steps">${rows.join('')}</ol>${fareBox(P.fareCost(r))}<div class="dd-schem"><button class="pill" data-schem>${svg('<path d="M4 6h5v2H6v3h3v2H6v3h3v2H4V6zm11 0h5v12h-5v-2h3v-3h-3v-2h3V8h-3V6zM10 11h4v2h-4z"/>')}${t('Show on transit map')}</button></div><p class="muted small dd-note">${t('Ride times come from the real road and track speed limits, with acceleration, stops and traffic. Waiting times are estimates: the export has no timetable.')}</p>`;
   }
 
+  /** Traffic-aware driving: what traffic adds, against the same route without it, and how much of it has data. */
+  function trafficNote(r: Route): string {
+    if (r.baseTime === undefined) return '';
+    const extra = r.time - r.baseTime;
+    const parts = [extra >= 30 ? t('Traffic adds about {time} to this route', { time: fmtTime(extra) }) : t('No delay from traffic')];
+    if ((r.trafficShare ?? 0) < 0.9) parts.push(t('traffic known for {pct}% of the route', { pct: Math.round((r.trafficShare ?? 0) * 100) }));
+    return `<div class="traffic-note">${esc(parts.join(' · '))}</div>`;
+  }
   /** A last-resort route that drives against a likely (unconfirmed) one-way: never shown as an ordinary route. */
   function onewayNote(r: Route, long = false): string {
     const n = r.againstLikelyOneWay?.length;
@@ -300,11 +310,19 @@ export function createDirections(d: DirectionsDeps) {
   avoid.addEventListener('change', () => { st.avoidTolls = avoid.checked; compute(); });
   const rulesBox = $<HTMLInputElement>('#dirRules');
   rulesBox.addEventListener('change', () => { st.rules = rulesBox.checked; compute(); });
-  /** the save's rules were loaded or removed: show the switch while they exist, and re-route */
+  const trafficBox = $<HTMLInputElement>('#dirTraffic');
+  /** the worker's router holds one traffic switch: Directions, reach and closures all follow it */
+  const sendTraffic = () => { worker.postMessage({ type: 'traffic', on: st.traffic }); $<HTMLElement>('.dir-traffic-note').hidden = !st.traffic; };
+  trafficBox.addEventListener('change', () => { st.traffic = trafficBox.checked; sendTraffic(); compute(); });
+  /** the save's rules or traffic were loaded or removed: show each switch while its data exists, and re-route */
   function rulesChanged() {
     const on = d.simRules();
     $<HTMLElement>('#dirRulesRow').hidden = !on;
     if (!on) { st.rules = true; rulesBox.checked = true; }
+    const tr = d.simTraffic();
+    $<HTMLElement>('#dirTrafficRow').hidden = !tr;
+    if (!tr) { st.traffic = false; trafficBox.checked = false; }
+    sendTraffic(); // a new load resets the router's switch: send the page's choice again
     if (st.from && st.to) compute();
   }
 
@@ -340,6 +358,8 @@ export function createDirections(d: DirectionsDeps) {
 
   return {
     open, close, isOpen, onResult, redraw: () => drawRoutes(), rulesChanged,
+    /** traffic-aware routing is on (reach and closures say so) */
+    trafficOn: () => st.traffic,
     /** language changed: relabel and re-ask the worker, whose step text is in the UI language */
     relang() { applyStatic(el); if (isOpen()) compute(); },
     /** a click on the map while directions are open fills the active empty field */

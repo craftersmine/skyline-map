@@ -1,5 +1,5 @@
 // Routing rules from a save, for matched segments only (see validate.ts). Each is a rule the game itself
-// enforces, read from the save and applied the way the game applies it; traffic density is never used:
+// enforces, read from the save and applied the way the game applies it (traffic density is not a rule: see sim/traffic.ts):
 //  - exact one-way directions: lane direction (export) + the segment's Invert flag (save) — PathFind.cs:779,
 //    NetInfo.cs:1103 (left-hand traffic also flips vehicle lanes);
 //  - U-turns: with TM:PE, its pathfinder's rule (junction restrictions on: JunctionRestrictionsManager.IsUturnAllowed,

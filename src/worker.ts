@@ -98,19 +98,24 @@ self.onmessage = async (e: MessageEvent) => {
       void ['Reading save file', 'Checking it matches this map', 'Reading simulation data'];
       // end i18n-keys
       if (!lastCity) { self.postMessage({ type: 'sim', id: msg.id, result: { ok: false, code: 'corrupt', detail: 'no map open' } }); return; }
-      router?.clearRules();
+      router?.clearRules(); router?.clearTraffic();
       // parsing can await (gzip): remember what this load was for, so a stale one never applies its rules
       const token = ++simToken, forRouter = router, forCity = lastCity;
       const result = await loadSim(msg.buffer, forCity, (step) => self.postMessage({ type: 'simProgress', id: msg.id, step }));
       // a matched save's traffic rules drive routing from now on (directions, reach, closures, transit times)
       if (result.ok) {
-        if (result.rules && router && router === forRouter && lastCity === forCity && token === simToken) router.applyRules(result.rules);
+        const current = router && router === forRouter && lastCity === forCity && token === simToken;
+        if (current && result.rules) router!.applyRules(result.rules);
+        // densities of matched segments, for traffic-aware routing (used only once the page switches it on)
+        if (current && result.traffic) router!.applyTraffic(result.traffic.ids, result.traffic.pct);
         delete result.rules;
       }
       self.postMessage({ type: 'sim', id: msg.id, result }, { transfer: transferables(result) });
     } else if (msg.type === 'simClear') {
       simToken++;
-      router?.clearRules();
+      router?.clearRules(); router?.clearTraffic();
+    } else if (msg.type === 'traffic') {
+      router?.setTraffic(!!msg.on);
     } else if (msg.type === 'lang') {
       setLang(msg.lang, false); // directions text is written in the UI language
     } else if (msg.type === 'contours' && lastHeight) {

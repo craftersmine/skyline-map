@@ -9,6 +9,7 @@ import { laneAccess, hasVehicle, type Access } from './access';
 import { hopTime, legRideTime, modeParams, type Piece } from './transit-time';
 import { t } from './i18n';
 import type { SimRules } from './sim/rules';
+import { trafficFactor } from './sim/traffic';
 
 export type Mode = 'drive' | 'transit' | 'walk' | 'bike';
 
@@ -45,6 +46,8 @@ interface Edge {
   spd?: [number, number];
   /** traffic rules from a matched save: every car lane a→b / b→a bars private cars (TM:PE); see restrictFactor */
   noCar?: [boolean, boolean];
+  /** traffic-aware routing: driving-time multiplier from the matched save's traffic density (see sim/traffic.ts) */
+  tf?: number;
 }
 
 type Hop = { pts: XY[]; len: number; time: number; segs: number[]; x?: boolean; timeOf: (limit?: PieceLimit) => number };
@@ -76,6 +79,10 @@ export interface Route {
   againstLikelyOneWay?: { at: XY; road: string }[];
   /** tolls were to be avoided but no toll-free route exists */
   tollsUnavoidable?: boolean;
+  /** traffic-aware driving: the same route's time without traffic, and the share of its driven length that has
+   *  traffic data from the save (the rest keeps the time without traffic) */
+  baseTime?: number;
+  trafficShare?: number;
 }
 
 const WALK = 1.35, BIKE = 4.6; // m/s
@@ -351,7 +358,8 @@ export class Router {
     // cars rarely hold the posted limit in town (traffic, signals): 85% on ordinary streets, full speed on highways
     if (mode === 'drive') {
       const v = e.spd && fwd !== undefined ? e.spd[fwd ? 0 : 1] : e.speed;
-      return e.len / (v * (/^(motorway|motorway_link|trunk)$/.test(e.cls) ? 1 : 0.85)) + (e.cls === 'minor' || e.cls === 'service' ? 2 : 0);
+      const t = e.len / (v * (/^(motorway|motorway_link|trunk)$/.test(e.cls) ? 1 : 0.85)) + (e.cls === 'minor' || e.cls === 'service' ? 2 : 0);
+      return this.trafficOn && e.tf ? t * e.tf : t;
     }
     if (mode === 'bike') return e.acc.bike ? (e.len / BIKE) * (e.bike ? 0.8 : 1) : e.len / WALK; // push the bike on footpaths
     return e.len / WALK;
@@ -430,6 +438,14 @@ export class Router {
         if (found.time >= 0) r.time = this.driveTime(path) + 30;
       }
       r.time += access.time; r.dist += access.dist; // getting from the clicked point to the road and back off it
+      if (mode === 'drive' && this.trafficOn) {
+        // the same route without traffic, for comparison (the reported time already excludes search-only penalties)
+        this.trafficOn = false;
+        try { r.baseTime = (hits ? this.driveTimeOn(path, hits.s, hits.t) : this.driveTime(path)) + 30 + access.time; } finally { this.trafficOn = true; }
+        let known = 0, all = 0;
+        for (const q of path) { const e = this.edges[q.e]; all += e.len; if (e.tf !== undefined) known += e.len; }
+        r.trafficShare = all > 0 ? known / all : 0;
+      }
       if ('bent' in found && found.bent) this.flagAgainst(r, path);
       const used = new Set(path.map((p) => p.e));
       const overlap = out.some((o) => { const prev = (o as any)._edges as Set<number>; let sh = 0; for (const e of used) if (prev.has(e)) sh += this.edges[e].len; return sh / r.dist > 0.7; });
@@ -537,7 +553,11 @@ export class Router {
     // TM:PE vehicle restrictions below Strict: the restricted direction costs TM:PE's own factor while searching,
     // never in the reported time (see driveTime)
     if (!this.restrictBan && !this.timing && e.noCar?.[fwd ? 0 : 1]) base *= this.restrictFactor;
-    if (e.ow !== 0 && (fwd ? 1 : -1) !== e.ow) return e.sure ? base * 30 + 600 : base * 6 + 90; // `sure` only reachable when relaxed
+    if (e.ow !== 0 && (fwd ? 1 : -1) !== e.ow) {
+      // the wrong-way penalty scales with the time without traffic, so traffic doesn't multiply it
+      const raw = this.trafficOn && e.tf ? base / e.tf : base;
+      return base + (e.sure ? raw * 29 + 600 : raw * 5 + 90); // `sure` only reachable when relaxed
+    }
     return base;
   }
   private degree = new Map<number, number>();
@@ -574,8 +594,10 @@ export class Router {
         const e = this.edges[ei], atA = e.a === node, d = this.reach(p, this.pos[node]);
         return { e: ei, pt: this.pos[node], d, along: atA ? 0 : e.len, i: atA ? 0 : Math.max(0, e.pts.length - 2), frac: atA ? 0 : 1, extra: 0 };
       }));
-      const base = Math.min(d0, ...nodes.map((n) => n.d));
-      return [...hits, ...nodes.map((n) => ({ ...n, extra: (2 * Math.max(0, n.d - base)) / 3 }))];
+      // roads and junctions compete on the same footing: distance beyond the nearest of them costs double (a road
+      // hit's own extra only counts distance beyond the nearest road, which may be far behind a closer junction)
+      const base = Math.min(d0, ...nodes.map((n) => n.d)), beyond = (d: number) => (2 * Math.max(0, d - base)) / 3;
+      return [...(base < d0 ? hits.map((h) => ({ ...h, extra: Math.max(h.extra, beyond(h.d)) })) : hits), ...nodes.map((n) => ({ ...n, extra: beyond(n.d) }))];
     };
     const SR = ends(from, true), TR = ends(to, true);
     const onRoads = SR.length && TR.length ? this.driveSearchOn(SR, TR, penalty) : null;
@@ -1037,6 +1059,25 @@ export class Router {
     this.restrictRule = r.restrictFactor;
     this.setRules(true);
   }
+  // ---------------------------------------------------------------- traffic from a matched save (estimate)
+  private trafficEdges: Edge[] = [];
+  private trafficOn = false;
+  /** densities (0-100 %) for matched segments; routing uses them only while setTraffic(true) */
+  applyTraffic(ids: ArrayLike<number>, pct: ArrayLike<number>) {
+    this.clearTraffic();
+    const byId = new Map(this.edges.map((e) => [e.id, e]));
+    for (let i = 0; i < ids.length; i++) {
+      const e = byId.get(ids[i]);
+      if (!e || !e.acc.drive) continue;
+      e.tf = trafficFactor(pct[i]); this.trafficEdges.push(e);
+    }
+  }
+  clearTraffic() {
+    for (const e of this.trafficEdges) delete e.tf;
+    this.trafficEdges = []; this.trafficOn = false;
+  }
+  /** traffic-aware driving on or off (Directions, reach and closures alike); no effect without data */
+  setTraffic(on: boolean) { this.trafficOn = on && this.trafficEdges.length > 0; }
   clearRules() {
     this.setRules(false);
     this.ruleEdits = []; this.hopEdits = []; this.uturnRule = new Set(); this.turnRule = new Map(); this.restrictRule = null;

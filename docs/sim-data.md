@@ -110,7 +110,6 @@ no TM:PE rule is used.
 | TM:PE limits on transit pieces | the same limits for the vehicle type riding the piece (e.g. metro tracks held to 60 km/h) | transit ride times |
 
 **Not applied, with reasons:**
-- **Traffic density:** it never enters a travel time.
 - **U-turns without TM:PE:** the vanilla rule also turns vehicles back where the other segments lack the road's
   vehicle categories. Those are prefab data the save doesn't hold, so U-turns stay as the router has them.
 - **"No limit" (TM:PE unlimited):** vehicles then drive at their own top speed, which isn't in the save, so the
@@ -146,7 +145,32 @@ is loaded.
 - the option switches are honoured;
 - reported times exclude penalties;
 - "rules off" and cleared rules reproduce the export-only drive, reach and transit results byte for byte;
+- traffic-aware routing (section 3c): off by default and byte-identical when off; never meaningfully faster than the best route without traffic; rules
+  still obeyed; other modes untouched;
 - rules touch matched segments only, also for partial matches.
+
+## Traffic-aware routing (optional estimate)
+
+Directions shows a "Traffic-aware routing" switch (교통 상황 반영) while a matched save is loaded. It is off by
+default and independent of "Traffic rules from my save". It is one setting in the worker's router, so reach and
+"What if it closes?" follow it too and say so.
+
+- **Model:** each matched road's driving time × a multiplier for its `m_trafficDensity` at the moment of saving.
+  The multiplier is 1.00 up to 5 %, 1.16 at 45 %, 1.56 at 55 %, 2.09 at 75 % and 3.57 at 95 % or more.
+- **Where it comes from:** the curve is measured from 27,463 private cars in 19 saves of 4 cities, as speed against
+  lane limit. The game itself has no density-to-speed rule; derivation, calibration and validation are in
+  [research/traffic-model.md](research/traffic-model.md).
+- **Search and shown time agree:** the route search minimises the traffic-adjusted time, and the card shows that
+  time with "Traffic adds about N min to this route".
+- **Rules still hold:** restriction penalties never count as time, and traffic never lifts a one-way, U-turn or
+  lane-arrow ban.
+- **Missing data:** unmatched roads keep their time without traffic, and the card says when less than 90 % of the
+  route has traffic data.
+- **Other modes:** walking, cycling and transit don't change.
+- **Limits:**
+  - density is per road, not per direction;
+  - it is a single moment with up to about 2 in-game hours of lag;
+  - the curve is a typical slowdown, not a live speed.
 
 ## Deliberately not shown
 

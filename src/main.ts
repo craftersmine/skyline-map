@@ -525,6 +525,7 @@ const dir = createDirections({
   pricing, editPricing: (tab, focus) => pricingEd.open(tab, focus),
   showOnSchematic: (route) => schem.open({ route }),
   simRules: () => sim.hasRules(),
+  simTraffic: () => sim.hasTraffic(),
   onOpen: () => { closePanel(); sim.close(); if (reach.isActive()) reach.close(); discoveries.close(); closure.close(); $('topbar').hidden = true; document.body.classList.add('dir-open'); },
   onClose: () => { $('topbar').hidden = false; document.body.classList.remove('dir-open'); },
 });
@@ -541,6 +542,7 @@ const reach = createReach(map, {
   worker,
   land: () => state.city?.districtField ?? null,
   night: () => state.mode === 'night',
+  traffic: () => dir.trafficOn(),
   onOpen: () => { closeDrawer(); closePanel(); sim.close(); if (dir.isOpen()) dir.close(); if (measure.isActive()) measure.close(); if (timelapse.isActive()) timelapse.close(); discoveries.close(); closure.close(); },
 });
 $('reachBtn').onclick = () => { closeDrawer(); const c = map.getCenter(); reach.open([c.lng, c.lat]); };
@@ -561,6 +563,7 @@ const closure = createClosure(map, {
   worker, toast,
   land: () => state.city?.districtField ?? null,
   night: () => state.mode === 'night',
+  traffic: () => dir.trafficOn(),
   onOpen: () => { sim.close(); closeDrawer(); closePanel(); hideCtx(); if (dir.isOpen()) dir.close(); if (reach.isActive()) reach.close(); if (measure.isActive()) measure.close(); if (timelapse.isActive()) timelapse.close(); discoveries.close(); },
 });
 $('closureMenu').onclick = () => closure.open();

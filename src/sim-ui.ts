@@ -54,7 +54,7 @@ void ['Simulation data', 'Close', 'Enhance your map with real traffic, populatio
   'Residents', 'Households', 'Workers now', 'Students', 'Visitors now', 'Happiness', 'Traffic', 'Speed limit (TM:PE)', 'Default speed for this road type (TM:PE)', 'Parking', 'Not allowed', 'One side only', 'No limit',
   'Passengers per week', '{res} residents · {tour} tourists', 'Last full week', 'Car trips saved', 'as the game shows it',
   'Simulation data loaded', 'Simulation data removed', 'Used for directions',
-  'Directions, reach and closures now follow the traffic rules in your save: {list}.', 'Left-hand traffic: one-way directions and per-direction rules aren\'t applied yet.', 'Traffic density is shown, never used as a speed.'];
+  'Directions, reach and closures now follow the traffic rules in your save: {list}.', 'Left-hand traffic: one-way directions and per-direction rules aren\'t applied yet.', 'Traffic density changes travel times only when you switch on traffic-aware routing in Directions, and then only as an estimate.'];
 // end i18n-keys
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -101,7 +101,7 @@ export function createSim(map: MLMap, deps: { worker: Worker; city: () => BuiltC
     if (m.type === 'simProgress') { st.step = m.step ?? ''; render(); return; }
     st.busy = false;
     const r = m.result!;
-    if (r.ok) { apply(r); deps.toast(t('Simulation data loaded')); if (r.rulesSummary) deps.onRules(); }
+    if (r.ok) { apply(r); deps.toast(t('Simulation data loaded')); if (r.rulesSummary || r.traffic?.ids.length) deps.onRules(); }
     else { st.fail = r; }
     render();
   }
@@ -122,7 +122,7 @@ export function createSim(map: MLMap, deps: { worker: Worker; city: () => BuiltC
   }
   /** drop the save entirely: what the page shows and the traffic rules in the worker's router */
   function clear() {
-    const hadRules = !!st.data?.rulesSummary;
+    const hadRules = !!st.data?.rulesSummary || !!st.data?.traffic?.ids.length;
     clearView();
     deps.worker.postMessage({ type: 'simClear' });
     if (hadRules) deps.onRules();
@@ -272,7 +272,7 @@ export function createSim(map: MLMap, deps: { worker: Worker; city: () => BuiltC
       r.track ? tn(r.track, '{n} track or road with a TM:PE limit for transit', '{n} tracks or roads with TM:PE limits for transit') : '',
     ].filter(Boolean);
     if (!parts.length) return '';
-    return `<h4>${t('Used for directions')}</h4><p class="sim-note sim-rules">${esc(t('Directions, reach and closures now follow the traffic rules in your save: {list}.', { list: parts.join(', ') }))}${r.leftHand ? ' ' + esc(t('Left-hand traffic: one-way directions and per-direction rules aren\'t applied yet.')) : ''} ${esc(t('Traffic density is shown, never used as a speed.'))}</p>`;
+    return `<h4>${t('Used for directions')}</h4><p class="sim-note sim-rules">${esc(t('Directions, reach and closures now follow the traffic rules in your save: {list}.', { list: parts.join(', ') }))}${r.leftHand ? ' ' + esc(t('Left-hand traffic: one-way directions and per-direction rules aren\'t applied yet.')) : ''} ${esc(t('Traffic density changes travel times only when you switch on traffic-aware routing in Directions, and then only as an estimate.'))}</p>`;
   }
   function layerPicker(d: SimData) {
     const avail = (l: Layer) => l === 'none' || (l === 'traffic' ? !!d.traffic : !!d.grids);
@@ -380,6 +380,8 @@ export function createSim(map: MLMap, deps: { worker: Worker; city: () => BuiltC
     isOpen: () => st.open,
     /** the worker's router follows this save's traffic rules */
     hasRules: () => !!st.data?.rulesSummary,
+    /** densities of matched roads are loaded in the worker's router, for traffic-aware routing */
+    hasTraffic: () => !!st.data?.traffic?.ids.length,
     loaded: () => !!st.data,
     /** a new map was opened: simulation data belonged to the old one */
     reset() { clear(); st.fail = null; st.busy = false; st.id++; st.layer = 'none'; close(); },
