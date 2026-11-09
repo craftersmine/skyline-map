@@ -14,8 +14,8 @@ const ko = (() => {
   return (l ?? navigator.language).toLowerCase().startsWith('ko');
 })();
 const TEXT = ko
-  ? { msg: '사이트 이용 현황을 보기 위해 Google 애널리틱스 쿠키를 사용합니다.', yes: '허용', no: '거부' }
-  : { msg: 'We use Google Analytics cookies to see how the site is used.', yes: 'Accept', no: 'Decline' };
+  ? { head: 'Skyline Map을 더 좋게 만들어 주세요', msg: 'Google 애널리틱스 쿠키로 사람들이 어떤 페이지를 보고 어떻게 찾아오는지 확인합니다. 지도 파일은 내 컴퓨터 밖으로 나가지 않아요.', yes: '좋아요', no: '아니요' }
+  : { head: 'Help make Skyline Map better', msg: 'Google Analytics cookies show us which pages people use and how they find the site. Your map files never leave your computer.', yes: 'Sure', no: 'No thanks' };
 
 declare global { interface Window { dataLayer?: unknown[]; gtag?: (...a: unknown[]) => void } }
 
@@ -47,7 +47,8 @@ function stopGA() {
 
 const STYLE = `
 .cc{position:fixed;left:16px;bottom:16px;z-index:2147483000;max-width:min(380px,calc(100vw - 32px));display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;padding:12px 14px;background:#fff;color:#202124;border:1px solid #dadce0;border-radius:12px;box-shadow:0 4px 16px rgb(0 0 0/.16);font:400 13px/1.45 -apple-system,'Segoe UI',Roboto,'Apple SD Gothic Neo',sans-serif}
-.cc p{margin:0;flex:1 1 200px}
+.cc p{margin:0;flex:1 1 220px}
+.cc b{display:block;font-weight:600;font-size:14px;margin-bottom:2px}
 .cc div{display:flex;gap:8px;margin-left:auto}
 .cc button{font-family:inherit;font-weight:600;font-size:13px;line-height:1;padding:8px 14px;border-radius:8px;border:1px solid #dadce0;background:#fff;color:#1a73e8;cursor:pointer}
 .cc button:hover{background:#f1f3f4}
@@ -61,7 +62,7 @@ function show() {
   if (!document.getElementById('cc-css')) { const st = document.createElement('style'); st.id = 'cc-css'; st.textContent = STYLE; document.head.appendChild(st); }
   el = document.createElement('div');
   el.className = 'cc'; el.setAttribute('role', 'region'); el.setAttribute('aria-label', 'Cookies');
-  el.innerHTML = `<p>${TEXT.msg}</p><div><button type="button" class="n">${TEXT.no}</button><button type="button" class="y">${TEXT.yes}</button></div>`;
+  el.innerHTML = `<p><b>${TEXT.head}</b>${TEXT.msg}</p><div><button type="button" class="n">${TEXT.no}</button><button type="button" class="y">${TEXT.yes}</button></div>`;
   el.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest('button');
     if (!b) return;
