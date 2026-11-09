@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Make a metro-style transit map of your Cities: Skylines city</title>
+  <meta name="description" content="Generate a schematic transit map of your Cities: Skylines metro, train, tram, ferry and bus lines automatically, in the style of the London and Seoul maps, from a CSLMapView export." />
+  <link rel="canonical" href="https://skyline.codz.me/blog/cities-skylines-transit-map" />
+  <meta name="theme-color" content="#1a73e8" />
+  <meta name="color-scheme" content="light" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="alternate" type="application/rss+xml" title="Skyline Map blog" href="/blog/feed.xml" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Skyline Map" />
+  <meta property="og:title" content="Make a metro-style transit map of your Cities: Skylines city" />
+  <meta property="og:description" content="Generate a schematic transit map of your Cities: Skylines metro, train, tram, ferry and bus lines automatically, in the style of the London and Seoul maps, from a CSLMapView export." />
+  <meta property="og:url" content="https://skyline.codz.me/blog/cities-skylines-transit-map" />
+  <meta property="og:image" content="https://skyline.codz.me/showcase/d-schem-2400.webp" />
+  <meta property="og:locale" content="en_US" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Make a metro-style transit map of your Cities: Skylines city" />
+  <meta name="twitter:description" content="Generate a schematic transit map of your Cities: Skylines metro, train, tram, ferry and bus lines automatically, in the style of the London and Seoul maps, from a CSLMapView export." />
+  <meta name="twitter:image" content="https://skyline.codz.me/showcase/d-schem-2400.webp" />
+  <script type="application/ld+json">[{"@context": "https://schema.org", "@type": "BlogPosting", "@id": "https://skyline.codz.me/blog/cities-skylines-transit-map#post", "mainEntityOfPage": "https://skyline.codz.me/blog/cities-skylines-transit-map", "headline": "Make a metro-style transit map of your Cities: Skylines city", "description": "Generate a schematic transit map of your Cities: Skylines metro, train, tram, ferry and bus lines automatically, in the style of the London and Seoul maps, from a CSLMapView export.", "image": "https://skyline.codz.me/showcase/d-schem-2400.webp", "datePublished": "2026-11-09", "dateModified": "2026-11-09", "inLanguage": "en", "author": {"@type": "Organization", "name": "Skyline Map", "url": "https://skyline.codz.me/", "logo": {"@type": "ImageObject", "url": "https://skyline.codz.me/icon-512.png"}}, "publisher": {"@type": "Organization", "name": "Skyline Map", "url": "https://skyline.codz.me/", "logo": {"@type": "ImageObject", "url": "https://skyline.codz.me/icon-512.png"}}, "about": {"@type": "VideoGame", "name": "Cities: Skylines"}, "isPartOf": {"@type": "Blog", "@id": "https://skyline.codz.me/blog/#blog", "name": "Skyline Map blog", "url": "https://skyline.codz.me/blog/"}}, {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Skyline Map", "item": "https://skyline.codz.me/"}, {"@type": "ListItem", "position": 2, "name": "Blog", "item": "https://skyline.codz.me/blog/"}, {"@type": "ListItem", "position": 3, "name": "Make a metro-style transit map", "item": "https://skyline.codz.me/blog/cities-skylines-transit-map"}]}]</script>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%231a73e8' d='M16 2C10.5 2 6 6.4 6 11.9 6 19.3 16 30 16 30s10-10.7 10-18.1C26 6.4 21.5 2 16 2z'/%3E%3Ccircle cx='16' cy='12' r='4' fill='white'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/showcase/showcase.css" />
+  <link rel="stylesheet" href="/src/blog/blog.css" />
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="top blog-top">
+    <div class="top-in">
+      <a class="mark" href="/"><span class="mark-pin" aria-hidden="true"></span>Skyline Map</a>
+      <nav aria-label="Site"><a href="/blog/">Blog</a><a href="/showcase">Tour</a></nav>
+      <a class="btn btn-primary btn-sm" href="/">Open your export</a>
+    </div>
+  </header>
+
+  <main id="main" class="container post">
+    <article>
+      <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">Blog</a> / Make a metro-style transit map</nav>
+      <h1>Make a metro-style transit map of your Cities: Skylines city</h1>
+      <p class="lead">Real cities explain their transit with a diagram, not a street map. Skyline Map draws one for your Cities: Skylines network automatically, with your line names, colours and stations.</p>
+      <p class="meta"><time datetime="2026-11-09">November 9, 2026</time></p>
+      <div class="prose">
+        <p>Drawing a transit diagram by hand takes hours, and it is out of date the next time you add a line. If you have a CSLMapView export, you can get one in a few seconds and come back for a new one whenever the network changes.</p>
+        <figure class="frame">
+          <img data-shot="d-schem" data-sizes="(min-width: 50rem) 720px, 100vw" alt="An automatic schematic transit map of rail, metro and ferry lines" />
+          <figcaption>A diagram generated from one export: rail, metro and ferry lines.</figcaption>
+        </figure>
+
+        <h2>How to make one</h2>
+        <ol>
+          <li>Export your city with the CSLMapView mod (see <a href="/blog/cities-skylines-city-map">the full walkthrough</a>).</li>
+          <li>Open the file at <a href="/">skyline.codz.me</a>.</li>
+          <li>Click the <b>Transit map</b> chip at the top, or choose Transit map from the menu.</li>
+        </ol>
+        <p>The diagram opens over the map. Drag to pan and scroll or pinch to zoom.</p>
+
+        <h2>What it keeps from your city</h2>
+        <p>The layout is generated, but the content isn't made up. It comes from the network in your export:</p>
+        <ul>
+          <li><b>Station order</b> on every line, as the vehicles run it.</li>
+          <li><b>Line names and colours</b> as you set them in game.</li>
+          <li><b>Interchanges</b>, where lines share a station.</li>
+          <li><b>Shared track</b>, drawn as parallel lines side by side instead of one line on top of another.</li>
+          <li><b>Branches and loops</b>.</li>
+          <li><b>Station names</b> you gave in game.</li>
+        </ul>
+        <p>Then the lines are straightened onto horizontal, vertical and 45° runs with even spacing between stations, the way the London and Seoul maps are drawn.</p>
+
+        <h3>Stations that are one place on the ground</h3>
+        <p>In the game, a metro station and the train station above it are separate buildings with separate stops. A good diagram shows them as one interchange. Skyline Map treats stops within 120 m of each other as one place, or within 260 m when their names match, like "Norisa Station" and "Norisa Ferry Pier". It draws them side by side with a walking-transfer link.</p>
+
+        <h2>Using it</h2>
+        <h3>Follow a line</h3>
+        <p>Tap a line to highlight it and see its stops in order.</p>
+        <figure class="frame">
+          <img data-shot="d-schem-line" data-sizes="(min-width: 50rem) 720px, 100vw" alt="One metro line highlighted on the schematic map with its stops listed" />
+          <figcaption>One line highlighted, with its stops.</figcaption>
+        </figure>
+        <h3>Plan from a station</h3>
+        <p>Tap a station to see which lines call there, then use <b>From here</b> or <b>To here</b> to plan a journey without leaving the diagram.</p>
+        <figure class="frame">
+          <img data-shot="d-schem-station" data-sizes="(min-width: 50rem) 720px, 100vw" alt="A station selected on the schematic map, with its lines and journey buttons" />
+          <figcaption>A station, its lines, and the journey buttons.</figcaption>
+        </figure>
+        <h3>See a route on the diagram</h3>
+        <p>A transit route planned in Directions can be shown on the diagram as well, which makes transfers easy to follow.</p>
+        <figure class="frame">
+          <img data-shot="d-schem-route" data-sizes="(min-width: 50rem) 720px, 100vw" alt="A planned journey highlighted on the schematic map" />
+          <figcaption>A journey drawn on the diagram.</figcaption>
+        </figure>
+        <h3>Filter by mode</h3>
+        <p>Turn modes on and off: train, metro, monorail, tram, ferry, cable car and bus. Buses start switched off, because a city with hundreds of bus lines reads better without them, but you can turn them on. The diagram remembers your choice.</p>
+
+        <h2>Tips for a cleaner diagram</h2>
+        <ul>
+          <li><b>Name your stations.</b> A station you didn't name shows no label, so a named network reads much better.</li>
+          <li><b>Give lines distinct colours.</b> The diagram uses the colours from your game.</li>
+          <li><b>Export again after changes.</b> The diagram is rebuilt from each file, so it never goes stale.</li>
+        </ul>
+        <p>Prefer the real geography? The normal map draws every line in its own colour too, with parallel lines offset so they don't hide each other, and a list of all lines with their stops.</p>
+      </div>
+    </article>
+    <aside class="cta" aria-labelledby="cta-h">
+      <h2 id="cta-h">Open your city as a map.</h2>
+      <p>Free, in your browser. Your file is read on your computer and never uploaded.</p>
+      <a class="btn btn-primary" href="/">Open your export</a>
+    </aside>
+    <aside class="related" aria-labelledby="rel-h">
+      <h2 id="rel-h">More guides</h2>
+      <ul class="related-list">
+        <li><a class="card" href="/blog/cities-skylines-route-planner">
+          <img data-shot="d-drive" data-sizes="(min-width: 50rem) 360px, 100vw" alt="" />
+          <div class="card-body"><h3>Driving, transit, walking and cycling directions in your Cities: Skylines city</h3><p>Plan Google Maps-style driving, public transit, walking and cycling routes on your own Cities: Skylines road and transit network, from a CSLMapView export. How it works and what it can&#x27;t know.</p></div>
+        </a></li><li><a class="card" href="/blog/cities-skylines-tolls-and-fares">
+          <img data-shot="d-toll" data-sizes="(min-width: 50rem) 360px, 100vw" alt="" />
+          <div class="card-body"><h3>Toll roads and transit fares for your Cities: Skylines city</h3><p>Find the toll booths in your Cities: Skylines city, see which routes pay tolls, avoid them, and set your own toll fees, transit fares, transfer rules and currency.</p></div>
+        </a></li>
+      </ul>
+    </aside>
+  </main>
+  <footer class="foot">
+    <div class="container foot-in">
+      <a class="mark" href="/"><span class="mark-pin" aria-hidden="true"></span>Skyline Map</a>
+      <p>A free map viewer for Cities: Skylines CSLMapView exports. Screenshots are the live app; place names in them are shown in English.</p>
+      <nav aria-label="Footer"><a href="/">Open the app</a><a href="/blog/">Blog</a><a href="/showcase">Tour</a></nav>
+    </div>
+  </footer>
+</body>
+</html>

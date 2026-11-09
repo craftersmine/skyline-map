@@ -48,7 +48,7 @@ function showcaseShots(): Plugin {
   return {
     name: 'showcase-shots',
     transformIndexHtml(html, ctx) {
-      if (!ctx.filename.endsWith('showcase.html')) return html;
+      if (!/(showcase\.html|[\\/]blog[\\/][^\\/]+\.html)$/.test(ctx.filename)) return html;
       const m: Record<string, { w: number; h: number; widths: number[] }> = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
       return html.replace(/<img([^>]*?)\sdata-shot="([^"]+)"([^>]*)>/g, (_all, pre: string, name: string, post: string) => {
         const s = m[name];
@@ -70,6 +70,12 @@ export default defineConfig({
   worker: { format: 'es' },
   build: {
     target: 'es2022', chunkSizeWarningLimit: 2000,
-    rollupOptions: { input: { main: path.resolve(__dirname, 'index.html'), showcase: path.resolve(__dirname, 'showcase.html'), notFound: path.resolve(__dirname, '404.html') } },
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'), showcase: path.resolve(__dirname, 'showcase.html'), notFound: path.resolve(__dirname, '404.html'),
+        // every blog/*.html is a page, served at /blog/<name>
+        ...Object.fromEntries(fs.readdirSync(path.resolve(__dirname, 'blog')).filter((f) => f.endsWith('.html')).map((f) => [`blog-${f.slice(0, -5)}`, path.resolve(__dirname, 'blog', f)])),
+      },
+    },
   },
 });

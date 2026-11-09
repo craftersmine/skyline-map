@@ -3,19 +3,58 @@
   <url>
     <loc>https://skyline.codz.me/</loc>
     <lastmod>2026-11-09</lastmod>
-    <changefreq>monthly</changefreq>
     <priority>1.0</priority>
     <image:image><image:loc>https://skyline.codz.me/og-image.jpg</image:loc></image:image>
   </url>
   <url>
     <loc>https://skyline.codz.me/showcase</loc>
     <lastmod>2026-11-09</lastmod>
-    <changefreq>monthly</changefreq>
     <priority>0.8</priority>
     <image:image><image:loc>https://skyline.codz.me/showcase/d-hero-2400.webp</image:loc></image:image>
     <image:image><image:loc>https://skyline.codz.me/showcase/d-3d-buildings-2400.webp</image:loc></image:image>
     <image:image><image:loc>https://skyline.codz.me/showcase/d-schem-2400.webp</image:loc></image:image>
     <image:image><image:loc>https://skyline.codz.me/showcase/d-transit-2400.webp</image:loc></image:image>
     <image:image><image:loc>https://skyline.codz.me/showcase/d-terrain-3d-2400.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://skyline.codz.me/blog/</loc>
+    <lastmod>2026-11-09</lastmod>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://skyline.codz.me/blog/cities-skylines-city-map</loc>
+    <lastmod>2026-11-09</lastmod>
+    <priority>0.7</priority>
+    <image:image><image:loc>https://skyline.codz.me/showcase/d-hero-2400.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://skyline.codz.me/blog/where-cslmapview-saves-files</loc>
+    <lastmod>2026-11-09</lastmod>
+    <priority>0.7</priority>
+    <image:image><image:loc>https://skyline.codz.me/showcase/e-welcome-1360.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://skyline.codz.me/blog/cities-skylines-transit-map</loc>
+    <lastmod>2026-11-09</lastmod>
+    <priority>0.7</priority>
+    <image:image><image:loc>https://skyline.codz.me/showcase/d-schem-2400.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://skyline.codz.me/blog/cities-skylines-route-planner</loc>
+    <lastmod>2026-11-09</lastmod>
+    <priority>0.7</priority>
+    <image:image><image:loc>https://skyline.codz.me/showcase/d-drive-2400.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://skyline.codz.me/blog/cities-skylines-tolls-and-fares</loc>
+    <lastmod>2026-11-09</lastmod>
+    <priority>0.7</priority>
+    <image:image><image:loc>https://skyline.codz.me/showcase/d-toll-2400.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://skyline.codz.me/blog/whats-in-a-cslmapview-export</loc>
+    <lastmod>2026-11-09</lastmod>
+    <priority>0.7</priority>
+    <image:image><image:loc>https://skyline.codz.me/showcase/d-building-asset-2400.webp</image:loc></image:image>
   </url>
 </urlset>

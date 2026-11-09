@@ -138,6 +138,8 @@ export const KO: Record<string, string> = {
   "Click the box above. In the window that opens, press {keys} to type a location.": "위의 상자를 클릭하고, 열리는 창에서 {keys}를 눌러 위치 입력란을 여세요.",
   "Paste with {keys}, press {enter}, then pick the newest file.": "{keys}로 붙여 넣고 {enter}를 누른 뒤, 가장 최근 파일을 고르세요.",
   "Steam library somewhere else? In Steam, right-click Cities: Skylines, choose Manage, then Browse local files, and open the CSLMapView folder.": "Steam 라이브러리를 다른 곳에 두었나요? Steam에서 Cities: Skylines를 오른쪽 클릭해 관리 → 로컬 파일 보기를 고른 뒤 CSLMapView 폴더를 여세요.",
+  "New to CSLMapView?": "CSLMapView가 처음인가요?",
+  "Read the guides": "가이드 읽기(영어)",
   "See what Skyline Map can do": "무엇을 할 수 있는지 보기",
   "A tour of maps, directions, transit maps and more, from the real app.": "실제 앱 화면으로 보는 지도·길찾기·노선도",
   "Product tour": "기능 둘러보기",

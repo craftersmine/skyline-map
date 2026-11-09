@@ -32,6 +32,10 @@ You can also drag a file onto the window or pick one with the file browser. Both
 - Finding your export: the start screen shows where CSLMapView saves exports on your OS (macOS, Windows or Linux, detected; the CSLMapView folder in the game's Steam install folder), a button to copy the path, and how to jump there in the file picker (⌘⇧G on macOS, Alt+D on Windows, Ctrl+L on Linux), with Steam's "Browse local files" for custom libraries
 - Search, an info panel for any feature you click, a list of transit lines, Default / Terrain / Night styles, PNG export, and shareable URLs (`?map=…#zoom/lat/lng`)
 
+## Blog
+
+Guides at `/blog/` (exporting, finding files, transit maps, directions, tolls and fares, export contents) for people searching for these topics. Posts live in `tools/blog/posts.py`; `python3 tools/blog/gen.py` writes `blog/*.html`, `public/blog/feed.xml` and `public/sitemap.xml`. Every `blog/*.html` is built as a page, and `<img data-shot>` there uses the showcase screenshots.
+
 ## Layout
 
 | File | Role |

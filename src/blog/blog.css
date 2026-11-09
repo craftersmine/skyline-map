@@ -1,0 +1,62 @@
+/* Blog: long-form guides in the showcase's look (loaded after showcase.css and uses its tokens).
+   One reading column, mono heads, Pretendard prose, screenshots in ink frames. */
+
+.blog-top .top-in { justify-content: space-between; }
+.blog-top nav { display: flex; gap: var(--s5); font: 700 var(--t-sm) var(--mono); }
+.blog-top nav a { text-decoration: none; color: var(--ink-2); }
+.blog-top nav a:hover, .blog-top nav a[aria-current='page'] { color: var(--ink); text-decoration: underline; }
+
+.post { max-width: calc(72ch + 2 * var(--gutter)); padding-block: var(--s7) var(--s8); }
+.crumbs { font: 500 var(--t-sm) var(--mono); color: var(--muted); margin-bottom: var(--s5); }
+.crumbs a { color: var(--ink-2); }
+.post h1 { font-size: clamp(2.1rem, 2.6vw + 1rem, 3.4rem); max-width: 22ch; line-height: 1.05; }
+.post .lead { margin-top: var(--s5); max-width: none; }
+.meta { margin-top: var(--s4); font: 500 var(--t-sm) var(--mono); color: var(--muted); }
+
+.prose { margin-top: var(--s6); display: grid; gap: var(--s4); }
+.prose h2 { font-size: clamp(1.45rem, 1vw + 1rem, 1.9rem); line-height: 1.15; max-width: none; margin-top: var(--s6); }
+.prose h3 { font-size: 1.15rem; line-height: 1.25; margin-top: var(--s4); letter-spacing: -0.02em; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.4em; display: grid; gap: var(--s2); }
+.prose li::marker { color: var(--cobalt); font-weight: 600; }
+.prose a { color: var(--cobalt); }
+.prose a:hover { color: var(--ink); }
+.prose code { font: 500 0.9em var(--mono); background: var(--paper-2); padding: 0.1em 0.35em; overflow-wrap: anywhere; }
+.prose kbd { font: 600 0.85em var(--mono); border: var(--hair) solid var(--rule); border-bottom-width: 2px; background: var(--paper-3); padding: 0.05em 0.4em; }
+.prose figure { margin-block: var(--s4); }
+.prose .note { border-left: 4px solid var(--cobalt); background: var(--paper-3); padding: var(--s4) var(--s5); }
+.prose table { width: 100%; border-collapse: collapse; font-size: var(--t-sm); }
+.prose th, .prose td { text-align: left; padding: var(--s2) var(--s3); border-bottom: var(--hair) solid var(--rule); vertical-align: top; }
+.prose th { font: 700 var(--t-sm) var(--mono); border-bottom: var(--bar) solid var(--ink); }
+.table-wrap { overflow-x: auto; }
+
+.cta { margin-top: var(--s7); display: grid; gap: var(--s4); justify-items: start; padding: var(--s6); background: var(--cobalt); color: var(--on-cobalt); border: var(--bar) solid var(--ink); }
+.cta h2 { font-size: clamp(1.5rem, 1vw + 1rem, 2rem); max-width: none; }
+.cta .btn-primary { background: var(--paper-3); border-color: var(--paper-3); color: var(--ink); }
+.cta .btn-primary:hover { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.cta :focus-visible { outline-color: var(--paper-3); }
+
+.related { margin-top: var(--s7); display: grid; gap: var(--s4); }
+.related h2 { font-size: 1.25rem; }
+
+/* index */
+.posts { list-style: none; margin: var(--s6) 0 0; padding: 0; display: grid; gap: var(--s5); }
+.card { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); border: var(--bar) solid var(--ink); background: var(--paper-3); text-decoration: none; transition: background-color var(--dur) steps(1); }
+.card:hover { background: var(--paper); }
+.card img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 16 / 10; border-right: var(--bar) solid var(--ink); }
+.card img[src*="/e-"] { object-fit: contain; background: var(--paper-2); padding: var(--s3); }
+.card-body { display: grid; gap: var(--s3); align-content: center; padding: var(--s5); }
+.card h2, .related .card h3 { font-size: clamp(1.2rem, 0.8vw + 0.9rem, 1.5rem); line-height: 1.15; max-width: none; }
+.card p { color: var(--ink-2); }
+.related .card { grid-template-columns: 1fr; }
+.related .card img { border-right: 0; border-bottom: var(--bar) solid var(--ink); }
+.related .card-body { padding: var(--s4); }
+.related-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s4); list-style: none; margin: 0; padding: 0; }
+
+@media (max-width: 720px) {
+  .card { grid-template-columns: 1fr; }
+  .card img { border-right: 0; border-bottom: var(--bar) solid var(--ink); }
+  .related-list { grid-template-columns: 1fr; }
+  .blog-top nav { gap: var(--s4); }
+  .blog-top .btn { display: none; }
+  .foot-in { grid-template-columns: 1fr; }
+}

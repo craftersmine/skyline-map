@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>How to turn your Cities: Skylines city into an interactive map</title>
+  <meta name="description" content="Export your Cities: Skylines city with the CSLMapView mod and open it as a detailed, interactive map in your browser, on Windows, Mac or Linux. Step by step." />
+  <link rel="canonical" href="https://skyline.codz.me/blog/cities-skylines-city-map" />
+  <meta name="theme-color" content="#1a73e8" />
+  <meta name="color-scheme" content="light" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="alternate" type="application/rss+xml" title="Skyline Map blog" href="/blog/feed.xml" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Skyline Map" />
+  <meta property="og:title" content="How to turn your Cities: Skylines city into an interactive map" />
+  <meta property="og:description" content="Export your Cities: Skylines city with the CSLMapView mod and open it as a detailed, interactive map in your browser, on Windows, Mac or Linux. Step by step." />
+  <meta property="og:url" content="https://skyline.codz.me/blog/cities-skylines-city-map" />
+  <meta property="og:image" content="https://skyline.codz.me/showcase/d-hero-2400.webp" />
+  <meta property="og:locale" content="en_US" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="How to turn your Cities: Skylines city into an interactive map" />
+  <meta name="twitter:description" content="Export your Cities: Skylines city with the CSLMapView mod and open it as a detailed, interactive map in your browser, on Windows, Mac or Linux. Step by step." />
+  <meta name="twitter:image" content="https://skyline.codz.me/showcase/d-hero-2400.webp" />
+  <script type="application/ld+json">[{"@context": "https://schema.org", "@type": "BlogPosting", "@id": "https://skyline.codz.me/blog/cities-skylines-city-map#post", "mainEntityOfPage": "https://skyline.codz.me/blog/cities-skylines-city-map", "headline": "How to turn your Cities: Skylines city into an interactive map", "description": "Export your Cities: Skylines city with the CSLMapView mod and open it as a detailed, interactive map in your browser, on Windows, Mac or Linux. Step by step.", "image": "https://skyline.codz.me/showcase/d-hero-2400.webp", "datePublished": "2026-11-09", "dateModified": "2026-11-09", "inLanguage": "en", "author": {"@type": "Organization", "name": "Skyline Map", "url": "https://skyline.codz.me/", "logo": {"@type": "ImageObject", "url": "https://skyline.codz.me/icon-512.png"}}, "publisher": {"@type": "Organization", "name": "Skyline Map", "url": "https://skyline.codz.me/", "logo": {"@type": "ImageObject", "url": "https://skyline.codz.me/icon-512.png"}}, "about": {"@type": "VideoGame", "name": "Cities: Skylines"}, "isPartOf": {"@type": "Blog", "@id": "https://skyline.codz.me/blog/#blog", "name": "Skyline Map blog", "url": "https://skyline.codz.me/blog/"}}, {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Skyline Map", "item": "https://skyline.codz.me/"}, {"@type": "ListItem", "position": 2, "name": "Blog", "item": "https://skyline.codz.me/blog/"}, {"@type": "ListItem", "position": 3, "name": "Turn your city into an interactive map", "item": "https://skyline.codz.me/blog/cities-skylines-city-map"}]}]</script>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%231a73e8' d='M16 2C10.5 2 6 6.4 6 11.9 6 19.3 16 30 16 30s10-10.7 10-18.1C26 6.4 21.5 2 16 2z'/%3E%3Ccircle cx='16' cy='12' r='4' fill='white'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/showcase/showcase.css" />
+  <link rel="stylesheet" href="/src/blog/blog.css" />
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="top blog-top">
+    <div class="top-in">
+      <a class="mark" href="/"><span class="mark-pin" aria-hidden="true"></span>Skyline Map</a>
+      <nav aria-label="Site"><a href="/blog/">Blog</a><a href="/showcase">Tour</a></nav>
+      <a class="btn btn-primary btn-sm" href="/">Open your export</a>
+    </div>
+  </header>
+
+  <main id="main" class="container post">
+    <article>
+      <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">Blog</a> / Turn your city into an interactive map</nav>
+      <h1>How to turn your Cities: Skylines city into an interactive map</h1>
+      <p class="lead">Cities: Skylines shows your city one camera angle at a time. With the CSLMapView mod and a browser you can see all of it as a proper map: every road, building and transit line, with directions and a transit diagram on top.</p>
+      <p class="meta"><time datetime="2026-11-09">November 9, 2026</time></p>
+      <div class="prose">
+        <p>This guide takes a city from your save game to a map you can pan, search and plan trips on. It takes about five minutes the first time, and seconds after that.</p>
+
+        <h2>What you need</h2>
+        <ul>
+          <li><b>Cities: Skylines</b> (the original game, not Cities: Skylines II).</li>
+          <li><b>The CSLMapView mod</b> by gansaku, from the <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=845665815" rel="noopener">Steam Workshop</a>. It writes your city to a <code>.cslmap</code> file.</li>
+          <li><b>A browser with WebGL</b>, which is any current version of Chrome, Edge, Firefox or Safari.</li>
+        </ul>
+        <p>The mod ships with its own viewer, CSLMapView.exe, which draws a map image from the file. Its author lists it as 64-bit Windows only. <a href="/">Skyline Map</a> reads the same file in a browser, so it also works on a Mac or Linux machine.</p>
+
+        <h2>Step 1: export the city in game</h2>
+        <ol>
+          <li>Subscribe to CSLMapView on the Workshop and enable it in Content Manager.</li>
+          <li>Load your city.</li>
+          <li>Open the mod's options and press <b>Export</b>. The mod also has an <b>Export and launch the viewer</b> button, which opens CSLMapView.exe afterwards on Windows. You don't need it for this.</li>
+        </ol>
+        <p>The mod can also export every time you save the game, if you turn that on in its settings. Then your newest file is always there when you want it.</p>
+
+        <h2>Step 2: find the file</h2>
+        <p>Exports go into a folder called <code>CSLMapView</code> inside the game's install folder. On a default Steam install that is:</p>
+        <ul>
+          <li>Windows: <code>C:\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\CSLMapView</code></li>
+          <li>macOS: <code>~/Library/Application Support/Steam/steamapps/common/Cities_Skylines/CSLMapView</code></li>
+          <li>Linux: <code>~/.local/share/Steam/steamapps/common/Cities_Skylines/CSLMapView</code></li>
+        </ul>
+        <p>The file is named after your city, for example <code>Sarrant-20261107-234707.cslmap</code> when timestamps are on, or <code>.cslmap.gz</code> when compression is on. If your Steam library lives somewhere else, see <a href="/blog/where-cslmapview-saves-files">where CSLMapView saves your files</a> for a quick way to get there.</p>
+
+        <h2>Step 3: open it in Skyline Map</h2>
+        <p>Go to <a href="/">skyline.codz.me</a> and drop the file on the page, or click the drop zone and pick it. The start screen also shows the folder for your system with a button to copy the path, and the shortcut that jumps straight to it in the file picker.</p>
+        <figure class="frame">
+          <img data-shot="e-welcome" data-sizes="(min-width: 50rem) 560px, 100vw" alt="The Skyline Map start screen with its drop zone" />
+          <figcaption>The start screen. Drop a .cslmap or .cslmap.gz file.</figcaption>
+        </figure>
+        <p class="note">The file is read inside your browser. It isn't uploaded anywhere, so it works the same for a city you'd rather keep to yourself.</p>
+        <p>Large cities take a few seconds to build: the map draws roads, lots, buildings, water, forests and terrain from the raw data, then the transit network on top.</p>
+
+        <h2>What you can do with it</h2>
+        <h3>Read it like a real map</h3>
+        <p>Roads are drawn at their true width, with highways, arterials, local streets and paths each in their own style. Zoned lots are tinted by use, with buildings inside them, and every street name is placed along the whole street rather than repeated on each piece. Station and building labels use the names you gave them in game.</p>
+        <figure class="frame">
+          <img data-shot="d-street" data-sizes="(min-width: 50rem) 720px, 100vw" alt="Street-level view with buildings, lots, a roundabout with one-way arrows and named landmarks" />
+          <figcaption>Street level: lots, buildings, landmarks and one-way arrows.</figcaption>
+        </figure>
+        <h3>Tilt it, or switch styles</h3>
+        <p>Right-drag to rotate and tilt. Buildings rise in 3D when the camera tilts, and the game's heightmap gives you hillshading, optional 3D terrain and a Terrain style with contour lines. There is also a Night style.</p>
+        <figure class="frame">
+          <img data-shot="d-3d-buildings" data-sizes="(min-width: 50rem) 720px, 100vw" alt="Tilted 3D view of a city centre with extruded buildings, metro lines and a river" />
+          <figcaption>A city centre tilted, with 3D buildings.</figcaption>
+        </figure>
+        <h3>Plan trips</h3>
+        <p>Directions work for driving, transit, walking and cycling, on your city's own road network and transit lines. How that works is in <a href="/blog/cities-skylines-route-planner">route planning in your city</a>.</p>
+        <h3>See the transit network as a diagram</h3>
+        <p>The Transit map button draws a metro-style diagram of your lines automatically. More in <a href="/blog/cities-skylines-transit-map">making a transit map of your city</a>.</p>
+        <h3>Measure, search and share</h3>
+        <p>The measure tool gives distance, area and an elevation profile. Search finds stations, roads and landmarks. You can also save the current view as a PNG.</p>
+
+        <h2>Common questions</h2>
+        <h3>Does it work with Cities: Skylines II?</h3>
+        <p>No. CSLMapView is a mod for the first game, and Skyline Map reads its export format.</p>
+        <h3>Do I need the mod's Windows viewer?</h3>
+        <p>No. Skyline Map only needs the <code>.cslmap</code> file, so the viewer doesn't matter on a Mac or Linux machine.</p>
+        <h3>The map looks out of date</h3>
+        <p>An export is a snapshot. Export again after you build, or turn on export on save, and open the newest file.</p>
+      </div>
+    </article>
+    <aside class="cta" aria-labelledby="cta-h">
+      <h2 id="cta-h">Open your city as a map.</h2>
+      <p>Free, in your browser. Your file is read on your computer and never uploaded.</p>
+      <a class="btn btn-primary" href="/">Open your export</a>
+    </aside>
+    <aside class="related" aria-labelledby="rel-h">
+      <h2 id="rel-h">More guides</h2>
+      <ul class="related-list">
+        <li><a class="card" href="/blog/where-cslmapview-saves-files">
+          <img data-shot="e-welcome" data-sizes="(min-width: 50rem) 360px, 100vw" alt="" />
+          <div class="card-body"><h3>Where CSLMapView saves your .cslmap files (Windows, macOS, Linux)</h3><p>The folder CSLMapView exports to on Windows, macOS and Linux, how the files are named, and the fastest way to open that folder from a file picker.</p></div>
+        </a></li><li><a class="card" href="/blog/cities-skylines-transit-map">
+          <img data-shot="d-schem" data-sizes="(min-width: 50rem) 360px, 100vw" alt="" />
+          <div class="card-body"><h3>Make a metro-style transit map of your Cities: Skylines city</h3><p>Generate a schematic transit map of your Cities: Skylines metro, train, tram, ferry and bus lines automatically, in the style of the London and Seoul maps, from a CSLMapView export.</p></div>
+        </a></li>
+      </ul>
+    </aside>
+  </main>
+  <footer class="foot">
+    <div class="container foot-in">
+      <a class="mark" href="/"><span class="mark-pin" aria-hidden="true"></span>Skyline Map</a>
+      <p>A free map viewer for Cities: Skylines CSLMapView exports. Screenshots are the live app; place names in them are shown in English.</p>
+      <nav aria-label="Footer"><a href="/">Open the app</a><a href="/blog/">Blog</a><a href="/showcase">Tour</a></nav>
+    </div>
+  </footer>
+</body>
+</html>
