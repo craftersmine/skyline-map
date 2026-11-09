@@ -58,6 +58,18 @@
     <image:image><image:loc>https://skyline.codz.me/showcase/d-lapse-late-2400.webp</image:loc></image:image>
   </url>
   <url>
+    <loc>https://skyline.codz.me/blog/cities-skylines-city-records</loc>
+    <lastmod>2026-11-09</lastmod>
+    <priority>0.7</priority>
+    <image:image><image:loc>https://skyline.codz.me/showcase/d-discover-2400.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://skyline.codz.me/blog/cities-skylines-road-closure</loc>
+    <lastmod>2026-11-09</lastmod>
+    <priority>0.7</priority>
+    <image:image><image:loc>https://skyline.codz.me/showcase/d-closure-2400.webp</image:loc></image:image>
+  </url>
+  <url>
     <loc>https://skyline.codz.me/blog/cities-skylines-tolls-and-fares</loc>
     <lastmod>2026-11-09</lastmod>
     <priority>0.7</priority>

@@ -46,11 +46,13 @@
           <li style="--c: #00b800"><a href="#directions">Directions</a></li>
           <li style="--c: #00b800"><a href="#tolls">Tolls</a></li>
           <li style="--c: #00b800"><a href="#reach">Reach</a></li>
+          <li style="--c: #00b800"><a href="#closures">Closures</a></li>
           <li style="--c: #cc0000"><a href="#transit">Transit</a></li>
           <li style="--c: #cc0000"><a href="#diagram">Diagram</a></li>
           <li style="--c: #b74c00"><a href="#prices">Prices</a></li>
           <li style="--c: #b74c00"><a href="#explore">Explore</a></li>
           <li style="--c: #b74c00"><a href="#timelapse">Time-lapse</a></li>
+          <li style="--c: #b74c00"><a href="#discoveries">Discoveries</a></li>
           <li style="--c: #00a6da"><a href="#mobile">Mobile</a></li>
           <li style="--c: #00a6da"><a href="#languages">Languages</a></li>
         </ol>
@@ -257,6 +259,28 @@
       </div>
     </section>
 
+    <!-- closures -->
+    <section class="sec container" id="closures" aria-labelledby="closures-h">
+      <div class="sec-head">
+        <h2 id="closures-h">What if it closes?</h2>
+        <p class="lead">Close a bridge, a tunnel, a stretch of railway or a station. Trips across it are routed again, before against after.</p>
+      </div>
+      <div class="tabs" data-tabs>
+        <div class="tablist" role="tablist" aria-label="Closures">
+          <button role="tab" id="t-close-bridge" aria-controls="p-close-bridge" aria-selected="true">A bridge</button>
+          <button role="tab" id="t-close-station" aria-controls="p-close-station" aria-selected="false" tabindex="-1">A station</button>
+        </div>
+        <figure class="frame zoomable" role="tabpanel" id="p-close-bridge" aria-labelledby="t-close-bridge">
+          <img data-shot="d-closure" data-sizes="(min-width: 90rem) 1312px, 100vw" alt="Severin Sky Bridge closed in red, the driving detour around the bay in purple, and the areas that now take longer shaded orange" />
+          <figcaption>Without Severin Sky Bridge, driving across takes 12 minutes instead of 4.</figcaption>
+        </figure>
+        <figure class="frame zoomable" role="tabpanel" id="p-close-station" aria-labelledby="t-close-station" hidden>
+          <img data-shot="d-closure-station" data-sizes="(min-width: 90rem) 1312px, 100vw" alt="Sarrant Station closed: three lines pass without stopping, and the places no longer reachable by transit within 30 minutes shaded purple" />
+          <figcaption>Close Sarrant Station and the area you can reach by transit in 30 minutes shrinks by a quarter.</figcaption>
+        </figure>
+      </div>
+    </section>
+
     <!-- transit -->
     <section class="sec container" id="transit" aria-labelledby="transit-h">
       <div class="sec-head">
@@ -397,6 +421,34 @@
           <input id="lapseRange" class="compare-range" type="range" min="0" max="100" value="50" />
           <figcaption>Drag to compare the same streets ten months apart.</figcaption>
         </figure>
+      </div>
+    </section>
+
+    <!-- discoveries -->
+    <section class="sec container" id="discoveries" aria-labelledby="disc-h">
+      <div class="split">
+        <div class="sec-head">
+          <h2 id="disc-h">Records of your city.</h2>
+          <p class="lead">The longest bridge, the deepest station, the loneliest building. Each one is measured from your export and shown on the map.</p>
+          <figure class="panel zoomable">
+            <img data-shot="e-discover" data-sizes="(min-width: 64rem) 400px, 90vw" alt="The City discoveries panel: 33 records in Sarrant grouped into transit, roads and bridges, land and water, buildings and oddities" />
+            <figcaption>33 records found in Sarrant.</figcaption>
+          </figure>
+        </div>
+        <div class="tabs" data-tabs>
+          <div class="tablist" role="tablist" aria-label="Discoveries">
+            <button role="tab" id="t-disc-bridge" aria-controls="p-disc-bridge" aria-selected="true">Longest bridge</button>
+            <button role="tab" id="t-disc-copies" aria-controls="p-disc-copies" aria-selected="false" tabindex="-1">Most-built asset</button>
+          </div>
+          <figure class="frame zoomable" role="tabpanel" id="p-disc-bridge" aria-labelledby="t-disc-bridge">
+            <img data-shot="d-discover" data-sizes="(min-width: 64rem) 58vw, 100vw" alt="Severin Sky Bridge highlighted in gold with a 2.96 km badge, and its record card: 1.40 km of the span is over water" />
+            <figcaption>Severin Sky Bridge: 2.96 km, 1.40 km of it over water.</figcaption>
+          </figure>
+          <figure class="frame zoomable" role="tabpanel" id="p-disc-copies" aria-labelledby="t-disc-copies" hidden>
+            <img data-shot="d-discover-copies" data-sizes="(min-width: 64rem) 58vw, 100vw" alt="Every copy of the most-built factory asset highlighted in gold across the industrial area" />
+            <figcaption>One factory asset, 398 copies, 1 in every 15 buildings.</figcaption>
+          </figure>
+        </div>
       </div>
     </section>
 

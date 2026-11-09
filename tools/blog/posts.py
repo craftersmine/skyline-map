@@ -336,6 +336,103 @@ body=f"""
 """),
 # ------------------------------------------------------------------------------------------------
 dict(
+slug='cities-skylines-city-records',
+title='Find the records in your Cities: Skylines city',
+short='City records and oddities',
+desc='Find the longest bridge, deepest station, steepest street, busiest interchange and other records in your Cities: Skylines city, measured from your CSLMapView export.',
+lead='Every city has its extremes: a bridge longer than the rest, a station deeper than the others, one house miles from anything. Skyline Map finds them in your export and shows each one on the map.',
+shot='d-discover',
+body=f"""
+        <h2>Open City discoveries</h2>
+        <ol>
+          <li>Open your export at <a href="/">skyline.codz.me</a>.</li>
+          <li>Press the gold sparkle button in the map controls, or choose <b>City discoveries</b> in the menu.</li>
+          <li>Pick a record. The map moves to it, draws it in gold and shows its number on a badge.</li>
+        </ol>
+        {fig('e-discover', 'The City discoveries panel: records grouped into transit, roads and bridges, land and water, buildings and oddities', 'Sarrant has 33 records, grouped by theme.', '(min-width: 50rem) 400px, 100vw')}
+        <p>The arrows step through every record, <b>Play tour</b> moves on by itself every few seconds, and the shuffle button jumps to a random one. On a phone the panel shrinks to the record's card, so the map stays in view.</p>
+
+        <h2>What it looks for</h2>
+        <h3>Transit</h3>
+        <ul>
+          <li>The longest line of each kind: railway, metro, tram, monorail, bus, ferry and cable car.</li>
+          <li>The busiest interchange, where the most lines stop.</li>
+          <li>The longest run between two stations, and the two stations closest together.</li>
+          <li>The deepest and the highest station, and the line with the biggest climb.</li>
+          <li>The stretch of road or track the most lines share.</li>
+        </ul>
+        <h3>Roads and bridges</h3>
+        <ul>
+          <li>The longest bridge (and how much of it is over water), viaduct, road tunnel and rail tunnel.</li>
+          <li>The longest named road, and the longest stretch that is dead straight.</li>
+          <li>The steepest street, the highest road, and any road below sea level.</li>
+          <li>The junction where the most roads meet, the widest road and the longest runway.</li>
+        </ul>
+        <h3>Land, water and buildings</h3>
+        <ul>
+          <li>The highest point on the map, the deepest water and how much of the map is water.</li>
+          <li>The building with the biggest footprint and the one made of the most parts.</li>
+          <li>The asset you built most often, the building highest above the sea and the loneliest one.</li>
+        </ul>
+        {fig('d-discover-copies', 'Every copy of the most-built factory asset highlighted in gold across an industrial area', 'The most-built asset: every copy lights up at once.')}
+        <h3>Oddities</h3>
+        <ul>
+          <li>Level crossings, where a road meets a railway with no bridge or tunnel.</li>
+          <li>Road islands: stretches of road with no road link to the rest of the city.</li>
+          <li>Ghost stations: named and built, but no line stops there.</li>
+          <li>The longest name you gave anything.</li>
+        </ul>
+
+        <h2>Measured, not guessed</h2>
+        <p>Every number comes from your export: lengths from the road and track geometry, heights from the nodes and terrain, counts from the network. The export has no traffic, passenger numbers or building heights, so there are no records about those.</p>
+        <p>A record only appears when your city has a clear one. A small town gets fewer records than a big city, and a city with no railway has no railway records.</p>
+"""),
+# ------------------------------------------------------------------------------------------------
+dict(
+slug='cities-skylines-road-closure',
+title='What happens if a bridge closes? Test your Cities: Skylines network',
+short='What if it closes?',
+desc='Close a road, bridge, tunnel, railway or station in your Cities: Skylines city and see the detours, cut transit lines, cut-off roads and lost reach, before and after.',
+lead='Some roads hold a whole city together and others barely matter. Close any piece of your network in Skyline Map and see what changes: the detour, the lines cut, the places cut off.',
+shot='d-closure',
+body=f"""
+        <h2>Close something</h2>
+        <ol>
+          <li>Open your export at <a href="/">skyline.codz.me</a>.</li>
+          <li>Choose <b>What if it closes?</b> in the menu, or press the button of the same name on any road, railway or station's info panel.</li>
+          <li>Tap a road, bridge, tunnel, railway or station on the map.</li>
+        </ol>
+        <p>A tap on an ordinary road closes the stretch between the junctions at either end. A bridge or tunnel closes as a whole, with the other carriageway of a divided road. For a named road you can also close all of it at once.</p>
+
+        <h2>What you see</h2>
+        <h3>The verdict</h3>
+        <p>One line sums it up: <b>No way around</b>, <b>Long detour</b>, <b>Noticeable detour</b>, <b>Barely matters</b> or <b>No trips affected</b>. It comes straight from the trip times below it, and it says when only one way of travelling is stuck, for example a bridge cars can drive round but people on foot can't.</p>
+        <h3>Trips across it</h3>
+        <p>Each direction a car may legally drive the closed stretch gets a row, plus a row on foot, with bars for the time before and after. Tap a row to see the old route and the detour on the map.</p>
+        {fig('e-closure', 'The closure panel for a bridge: Long detour, driving each way 4 minutes before and 12 to 15 minutes after, and a bus line cut', 'Severin Sky Bridge closed: a long detour each way, and an express bus cut.', '(min-width: 50rem) 420px, 100vw')}
+        <h3>Lines and stations</h3>
+        <p>Transit lines that run over the closure are cut there. The parts on either side keep running, and the trips between the stations either side of the cut are timed again. Close a station and its lines run through without stopping; the panel shows the nearest station that is still open and how far it is to walk.</p>
+        <h3>What can you reach in 30 minutes?</h3>
+        <p>A pin starts on one side of the closure (or at the station). Choose driving, transit, walking or cycling and the map shades everywhere within 30 minutes: before, after, or the change, from no change to more than 15 minutes slower, or lost altogether. Drag the pin to start somewhere else.</p>
+        {fig('d-closure-station', 'Sarrant Station closed: the places no longer reachable by transit within 30 minutes shaded purple across the west of the city', 'Close Sarrant Station and the 30-minute transit reach shrinks from 29.0 to 21.5 km².')}
+
+        <h2>What it does and doesn't model</h2>
+        <ul>
+          <li><b>Routing:</b> the same routing as Directions, with the same one-way rules, turn costs, walking paths and transit waits.</li>
+          <li><b>Cut off:</b> roads that can no longer be reached from the rest of the network, or left again, by car or on foot.</li>
+          <li><b>No diversions:</b> lines over the closure are cut, not rerouted, because there's no way to know how you'd reroute them.</li>
+          <li><b>No traffic:</b> the export has no traffic, passenger or cost figures, so nothing here estimates them. It shows how the network connects, not how busy it would get.</li>
+        </ul>
+
+        <h2>Ideas</h2>
+        <ul>
+          <li><b>Find your weak links.</b> Close each bridge to an island or across a river. A "No way around" is a place that needs a second crossing.</li>
+          <li><b>Check a new line.</b> Close an old station and see whether the new line gives people somewhere close to go instead.</li>
+          <li><b>Plan roadworks.</b> Before demolishing a road in game, close it here and look at the detour first.</li>
+        </ul>
+"""),
+# ------------------------------------------------------------------------------------------------
+dict(
 slug='cities-skylines-tolls-and-fares',
 title='Toll roads and transit fares for your Cities: Skylines city',
 short='Toll roads and transit fares',
