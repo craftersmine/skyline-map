@@ -13,6 +13,7 @@ import { createDirections } from './directions';
 import { createMeasure } from './measure';
 import { createReach } from './reach-ui';
 import { createTimelapse } from './timelapse';
+import { createDiscoveries } from './discover-ui';
 import { createSchematic } from './schematic-view';
 import { createContextStore, createContextEditor, moneyField, parseMoney, describeRule } from './context-ui';
 import { bottomSheet, isPhone } from './sheet';
@@ -125,6 +126,8 @@ async function openLocal(file: string) {
 function showCity(city: BuiltCity) {
   if (reach.isActive()) reach.close();
   timelapse.reset();
+  discoveries.set(city.discoveries ?? null);
+  $('discoverBtn').hidden = !discoveries.count();
   state.city = city;
   state.contoursLoaded = false;
   setDem(city.dem);
@@ -454,6 +457,7 @@ map.on('click', (e) => {
   hideCtx();
   if (measure.isActive()) { measure.click(e); return; }
   if (reach.isActive()) { reach.click([e.lngLat.lng, e.lngLat.lat]); return; }
+  if (discoveries.isActive()) return;
   if (dir.isOpen()) { dir.mapClick([e.lngLat.lng, e.lngLat.lat], placeLabelAt(e.point)); return; }
   const r = 6;
   const feats = map.queryRenderedFeatures([[e.point.x - r, e.point.y - r], [e.point.x + r, e.point.y + r]], { layers: interactive() });
@@ -504,14 +508,14 @@ const dir = createDirections({
   map, worker, city: () => state.city,
   pricing, editPricing: (tab, focus) => pricingEd.open(tab, focus),
   showOnSchematic: (route) => schem.open({ route }),
-  onOpen: () => { closePanel(); if (reach.isActive()) reach.close(); $('topbar').hidden = true; document.body.classList.add('dir-open'); },
+  onOpen: () => { closePanel(); if (reach.isActive()) reach.close(); discoveries.close(); $('topbar').hidden = true; document.body.classList.add('dir-open'); },
   onClose: () => { $('topbar').hidden = false; document.body.classList.remove('dir-open'); },
 });
 $('dirBtn').onclick = () => dir.open();
 $('dirFab').onclick = () => dir.open();
 
 const measure = createMeasure(map, {
-  onOpen: () => { closePanel(); if (dir.isOpen()) dir.close(); if (reach.isActive()) reach.close(); $('measureBtn').classList.add('on'); },
+  onOpen: () => { closePanel(); if (dir.isOpen()) dir.close(); if (reach.isActive()) reach.close(); discoveries.close(); $('measureBtn').classList.add('on'); },
   onClose: () => $('measureBtn').classList.remove('on'),
 });
 $('measureBtn').onclick = () => measure.toggle();
@@ -520,15 +524,21 @@ const reach = createReach(map, {
   worker,
   land: () => state.city?.districtField ?? null,
   night: () => state.mode === 'night',
-  onOpen: () => { closeDrawer(); closePanel(); if (dir.isOpen()) dir.close(); if (measure.isActive()) measure.close(); if (timelapse.isActive()) timelapse.close(); },
+  onOpen: () => { closeDrawer(); closePanel(); if (dir.isOpen()) dir.close(); if (measure.isActive()) measure.close(); if (timelapse.isActive()) timelapse.close(); discoveries.close(); },
 });
 $('reachBtn').onclick = () => { closeDrawer(); const c = map.getCenter(); reach.open([c.lng, c.lat]); };
 
 const timelapse = createTimelapse(map, {
   worker, city: () => state.city, currentFile: () => state.currentFile, toast,
-  onOpen: () => { closeDrawer(); closePanel(); if (reach.isActive()) reach.close(); if (measure.isActive()) measure.close(); },
+  onOpen: () => { closeDrawer(); closePanel(); if (reach.isActive()) reach.close(); if (measure.isActive()) measure.close(); discoveries.close(); },
 });
 $('timelapseBtn').onclick = () => timelapse.open();
+
+const discoveries = createDiscoveries(map, {
+  onOpen: () => { closeDrawer(); closePanel(); hideCtx(); if (dir.isOpen()) dir.close(); if (reach.isActive()) reach.close(); if (measure.isActive()) measure.close(); if (timelapse.isActive()) timelapse.close(); },
+});
+$('discoverBtn').onclick = () => (discoveries.isActive() ? discoveries.close() : discoveries.open());
+$('discoverMenu').onclick = () => discoveries.open();
 
 /** Name of whatever labelled thing is under a screen point, else a generic pin label. */
 function placeLabelAt(pt: { x: number; y: number }): string {
@@ -735,7 +745,7 @@ onLang(() => {
   applyStatic(); renderLangSwitches(); applyStyle();
   if (state.city) { renderDrawer(state.city); cityTexts(state.city); }
   if (!$('panel').hidden) { if (panelRefresh) panelRefresh(); else closePanel(); }
-  dir.relang(); measure.refresh(); pricingEd.refresh(); schem.relang();
+  dir.relang(); measure.refresh(); pricingEd.refresh(); schem.relang(); discoveries.refresh();
   if (!$('welcome').hidden) loadLocalList();
 });
 renderLangSwitches();

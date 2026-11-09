@@ -7,6 +7,7 @@ import { setLang } from './i18n';
 import { bestSchematic } from './schematic-render';
 import type { SchemInput } from './schematic';
 import { reachGrid } from './reach';
+import { discover } from './discover';
 import { cityKeys, scanExport, bornById, exportTime, type HistoryKeys } from './history';
 import type { CityData } from './parse';
 
@@ -36,7 +37,7 @@ self.onmessage = async (e: MessageEvent) => {
       const xml = await decode(msg.buffer);
       // i18n-keys: progress steps, shown translated by the page
       const steps = ['Reading nodes', 'Reading segments', 'Reading buildings', 'Reading terrain', 'Classifying roads', 'Shaping buildings', 'Tracing transit lines', 'Tracing coastlines', 'Growing forests', 'Mapping built-up areas'];
-      void ['Decoding file', 'Preparing directions', 'Rendering'];
+      void ['Decoding file', 'Preparing directions', 'Finding discoveries', 'Rendering'];
       // end i18n-keys
       const p = (s: string) => progress(s, 8 + (steps.indexOf(s) + 1) * 8.5);
       const city = parseCity(xml, p);
@@ -45,6 +46,9 @@ self.onmessage = async (e: MessageEvent) => {
       const oneway = inferOneWay(city);
       const tolls = detectTolls(city);
       const built = buildCity(city, p, oneway, tolls);
+      progress('Finding discoveries', 92);
+      // a record that throws must not stop the city from opening
+      try { built.discoveries = discover(city, built); } catch (err) { console.warn('[atlas] discoveries failed', err); built.discoveries = null; }
       progress('Preparing directions', 94);
       router = new Router(city, built.stopNames ?? new Map(), oneway, tolls);
       delete built.stopNames;

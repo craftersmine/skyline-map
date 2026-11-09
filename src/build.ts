@@ -27,6 +27,8 @@ export interface BuiltCity {
   districtField?: { n: number; cell: number; l1: Int32Array; d1: Float32Array; l2: Int32Array; d2: Float32Array; land: Uint8Array };
   /** network for the schematic map (worker only, not sent to the page) */
   schem?: SchemInput;
+  /** City Discoveries (records found in the export), see discover.ts */
+  discoveries?: import('./discover').DiscoveryResult | null;
 }
 
 const ll = (p: { x: number; z: number }) => toLngLat(p.x, p.z);
