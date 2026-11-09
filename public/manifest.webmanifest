@@ -1,6 +1,6 @@
 {
-  "name": "Skyline Atlas",
-  "short_name": "Skyline Atlas",
+  "name": "Skyline Map",
+  "short_name": "Skyline Map",
   "description": "Cities: Skylines CSLMapView exports as interactive maps with directions and transit planning.",
   "start_url": "/",
   "display": "standalone",

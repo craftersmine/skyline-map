@@ -154,7 +154,7 @@ function showCity(city: BuiltCity) {
 
 function cityTexts(city: BuiltCity) {
   ($('search') as HTMLInputElement).placeholder = t('Search {city}', { city: city.meta.name });
-  document.title = `${city.meta.name} · Skyline Atlas`;
+  document.title = `${city.meta.name} · Skyline Map`;
 }
 
 // ------------------------------------------------------------------ welcome screen
@@ -260,7 +260,7 @@ const LABELS: Record<string, string> = {
 const MODES: Record<string, string> = { bus: 'Bus', tram: 'Tram', metro: 'Metro', train: 'Train', monorail: 'Monorail', ferry: 'Ferry', cablecar: 'Cable car', tour: 'Walking tour', air: 'Air', other: 'Other' };
 const BOOTH_KINDS = ['One-way toll booth (small)', 'One-way toll booth (medium)', 'One-way toll booth (large)', 'Two-way toll booth (small)', 'Two-way toll booth (medium)', 'Two-way toll booth (large)', 'Toll lanes (no booth in the export)'];
 const GENERIC_NAMES = ['Toll booth', 'Toll lanes', 'Airport concourse', 'Dropped pin', 'Unnamed stop'];
-const ERRORS = ['Not a Skyline Atlas context file'];
+const ERRORS = ['Not a Skyline Map context file'];
 void ERRORS;
 // end i18n-keys
 /** translated label, or undefined when there is none (so `??` fallbacks still work) */

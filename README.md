@@ -1,4 +1,4 @@
-# Skyline Atlas
+# Skyline Map
 
 A map viewer for **Cities: Skylines** [CSLMapView](https://steamcommunity.com/sharedfiles/filedetails/?id=845665815) exports (`.cslmap` / `.cslmap.gz`), styled to look like Google Maps.
 

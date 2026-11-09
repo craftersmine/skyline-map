@@ -152,7 +152,7 @@ function rule(v: any): FareRule | null {
   return { base: v.base, includedKm: num(v.includedKm, 1e5) ?? 0, tiers };
 }
 export function sanitizeContext(v: any, city: string): CityContext {
-  if (!v || typeof v !== 'object' || v.format !== 'skyline-atlas-context') throw new Error('Not a Skyline Atlas context file');
+  if (!v || typeof v !== 'object' || v.format !== 'skyline-atlas-context') throw new Error('Not a Skyline Map context file');
   const out = emptyContext(city);
   const c = v.currency;
   if (c && typeof c === 'object' && str(c.symbol, 8)) out.currency = { code: str(c.code, 12) || 'CUSTOM', symbol: str(c.symbol, 8), decimals: Math.min(4, Math.round(num(c.decimals, 4) ?? 0)), position: c.position === 'after' ? 'after' : 'before', space: !!c.space };
