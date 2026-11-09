@@ -64,7 +64,7 @@ FOOT = '''  <footer class="foot">
     <div class="container foot-in">
       <a class="mark" href="/"><span class="mark-pin" aria-hidden="true"></span>Skyline Map</a>
       <p>A free map viewer for Cities: Skylines CSLMapView exports. Screenshots are the live app; place names in them are shown in English.</p>
-      <nav aria-label="Footer"><a href="/">Open the app</a><a href="/blog/">Blog</a><a href="/showcase">Tour</a><a href="#cookies" data-consent>Cookies</a></nav>
+      <nav aria-label="Footer"><a href="/">Open the app</a><a href="/blog/">Blog</a><a href="/showcase">Tour</a><a href="/privacy">Privacy</a></nav>
     </div>
   </footer>
 </body>
@@ -162,3 +162,48 @@ open(ROOT + 'public/sitemap.xml', 'w').write(f'''<?xml version="1.0" encoding="U
 </urlset>
 ''')
 print('ok', len(POSTS))
+
+# privacy page (/privacy): what analytics collects, in plain words
+url = SITE + '/privacy'
+title = 'Privacy: what Skyline Map collects'
+desc = 'What Skyline Map collects when you allow analytics cookies, what it never collects, and how to change your choice.'
+ld = {"@context": "https://schema.org", "@type": "WebPage", "url": url, "name": title, "description": desc, "inLanguage": ["en", "ko"], "publisher": PUBLISHER}
+page = head(title, desc, url, SITE + '/og-image.jpg', ld, 'website') + '''
+  <main id="main" class="container post">
+    <h1>Privacy</h1>
+    <p class="lead">Skyline Map counts visits with Google Analytics, but only if you say yes. Here is exactly what that means.</p>
+    <div class="prose">
+      <h2>Your map files stay on your computer</h2>
+      <p>When you open a <code>.cslmap</code> file, it is read and drawn inside your browser. It is never uploaded, and nothing about your city (names, roads, routes you plan) is sent anywhere, with or without analytics.</p>
+
+      <h2>If you click "Sure"</h2>
+      <p>Google Analytics loads and sets two cookies, <code>_ga</code> and <code>_ga_123XJYCYYP</code>, which last up to two years. They let us tell new visitors from returning ones. With them, we see:</p>
+      <ul>
+        <li><b>Visits:</b> which pages are viewed, how long people stay, and whether they come back.</li>
+        <li><b>How people find the site:</b> for example Google search, Reddit, or a direct link.</li>
+        <li><b>Rough context:</b> country and city (worked out from your IP address, which Google Analytics doesn't store), device type, browser, operating system, screen size and language.</li>
+        <li><b>A few page interactions:</b> scrolling to the bottom of a page, clicks on links to other sites, and file downloads.</li>
+      </ul>
+      <p>We don't see who you are, and we don't track what you do inside a map after it loads: panning, searching, directions and settings send nothing.</p>
+      <p>Google processes this data under its own terms. See <a href="https://policies.google.com/technologies/partner-sites" rel="noopener">how Google uses information from sites that use its services</a>.</p>
+
+      <h2>If you click "No thanks"</h2>
+      <p>Google Analytics never loads and no analytics cookies are set. Everything on the site works the same.</p>
+
+      <h2>Other things kept in your browser</h2>
+      <p>Your language, map options, the prices you set for tolls and fares, and your cookie choice are saved in your browser's own storage so they are there next time. They stay on your device and are never sent to us.</p>
+
+      <h2>Change your choice</h2>
+      <p>You can change your mind at any time. Declining after accepting turns analytics off and deletes its cookies.</p>
+      <p><button type="button" class="btn btn-primary" data-consent>Change cookie choice</button></p>
+
+      <h2 lang="ko">한국어 요약</h2>
+      <div lang="ko" class="prose">
+        <p>지도 파일은 브라우저 안에서만 읽히며 어디에도 업로드되지 않습니다.</p>
+        <p>"좋아요"를 누르면 Google 애널리틱스가 쿠키(<code>_ga</code>, <code>_ga_123XJYCYYP</code>, 최대 2년)를 사용해 방문 페이지와 머문 시간, 재방문 여부, 유입 경로(검색, 링크 등), 대략적인 지역(IP로 추정하며 IP는 저장하지 않음), 기기·브라우저·언어, 페이지 끝까지 스크롤, 외부 링크 클릭을 수집합니다. 지도를 연 뒤 앱 안에서 하는 일은 수집하지 않습니다.</p>
+        <p>"아니요"를 누르면 애널리틱스를 불러오지 않으며 쿠키도 만들지 않습니다. 선택은 위 버튼이나 앱 메뉴의 "쿠키 설정"에서 언제든 바꿀 수 있습니다.</p>
+      </div>
+    </div>
+  </main>
+''' + FOOT
+open(ROOT + 'privacy.html', 'w').write(page)

@@ -14,8 +14,8 @@ const ko = (() => {
   return (l ?? navigator.language).toLowerCase().startsWith('ko');
 })();
 const TEXT = ko
-  ? { msg: '방문 수를 세어도 될까요? 분석 쿠키로 무엇을 개선할지 알 수 있어요.', yes: '좋아요', no: '아니요' }
-  : { msg: 'Mind if we count visits? Analytics cookies help us see what to improve.', yes: 'Sure', no: 'No thanks' };
+  ? { msg: '방문 수를 세고 유용한 정보를 수집해도 될까요? 분석 쿠키로 무엇을 개선할지 알 수 있어요.', more: '자세히', yes: '좋아요', no: '아니요' }
+  : { msg: 'Mind if we count visits and get some useful info? Analytics cookies help us see what to improve.', more: 'Details', yes: 'Sure', no: 'No thanks' };
 
 declare global { interface Window { dataLayer?: unknown[]; gtag?: (...a: unknown[]) => void } }
 
@@ -49,6 +49,9 @@ const STYLE = `
 .cc{position:fixed;left:16px;bottom:16px;z-index:2147483000;max-width:min(380px,calc(100vw - 32px));display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;padding:12px 14px;background:#fff;color:#202124;border:1px solid #dadce0;border-radius:12px;box-shadow:0 4px 16px rgb(0 0 0/.16);font:400 13px/1.45 -apple-system,'Segoe UI',Roboto,'Apple SD Gothic Neo',sans-serif}
 .cc p{margin:0;flex:1 1 220px}
 .cc div{display:flex;gap:8px;margin-left:auto}
+.cc a{color:#1a73e8;font-weight:600;text-decoration:none;white-space:nowrap}
+.cc a:hover{text-decoration:underline}
+.cc a:focus-visible{outline:2px solid #1a73e8;outline-offset:2px;border-radius:2px}
 .cc button{font-family:inherit;font-weight:600;font-size:13px;line-height:1;padding:8px 14px;border-radius:8px;border:1px solid #dadce0;background:#fff;color:#1a73e8;cursor:pointer}
 .cc button:hover{background:#f1f3f4}
 .cc button.y{background:#1a73e8;border-color:#1a73e8;color:#fff}
@@ -61,7 +64,7 @@ function show() {
   if (!document.getElementById('cc-css')) { const st = document.createElement('style'); st.id = 'cc-css'; st.textContent = STYLE; document.head.appendChild(st); }
   el = document.createElement('div');
   el.className = 'cc'; el.setAttribute('role', 'region'); el.setAttribute('aria-label', 'Cookies');
-  el.innerHTML = `<p>${TEXT.msg}</p><div><button type="button" class="n">${TEXT.no}</button><button type="button" class="y">${TEXT.yes}</button></div>`;
+  el.innerHTML = `<p>${TEXT.msg} <a href="/privacy">${TEXT.more}</a></p><div><button type="button" class="n">${TEXT.no}</button><button type="button" class="y">${TEXT.yes}</button></div>`;
   el.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest('button');
     if (!b) return;

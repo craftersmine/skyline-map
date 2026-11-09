@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Privacy: what Skyline Map collects</title>
+  <meta name="description" content="What Skyline Map collects when you allow analytics cookies, what it never collects, and how to change your choice." />
+  <link rel="canonical" href="https://skyline.codz.me/privacy" />
+  <meta name="theme-color" content="#1a73e8" />
+  <meta name="color-scheme" content="light" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="alternate" type="application/rss+xml" title="Skyline Map blog" href="/blog/feed.xml" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Skyline Map" />
+  <meta property="og:title" content="Privacy: what Skyline Map collects" />
+  <meta property="og:description" content="What Skyline Map collects when you allow analytics cookies, what it never collects, and how to change your choice." />
+  <meta property="og:url" content="https://skyline.codz.me/privacy" />
+  <meta property="og:image" content="https://skyline.codz.me/og-image.jpg" />
+  <meta property="og:locale" content="en_US" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Privacy: what Skyline Map collects" />
+  <meta name="twitter:description" content="What Skyline Map collects when you allow analytics cookies, what it never collects, and how to change your choice." />
+  <meta name="twitter:image" content="https://skyline.codz.me/og-image.jpg" />
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebPage", "url": "https://skyline.codz.me/privacy", "name": "Privacy: what Skyline Map collects", "description": "What Skyline Map collects when you allow analytics cookies, what it never collects, and how to change your choice.", "inLanguage": ["en", "ko"], "publisher": {"@type": "Organization", "name": "Skyline Map", "url": "https://skyline.codz.me/", "logo": {"@type": "ImageObject", "url": "https://skyline.codz.me/icon-512.png"}}}</script>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%231a73e8' d='M16 2C10.5 2 6 6.4 6 11.9 6 19.3 16 30 16 30s10-10.7 10-18.1C26 6.4 21.5 2 16 2z'/%3E%3Ccircle cx='16' cy='12' r='4' fill='white'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/showcase/showcase.css" />
+  <link rel="stylesheet" href="/src/blog/blog.css" />
+  <script type="module" src="/src/consent.ts"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="top blog-top">
+    <div class="top-in">
+      <a class="mark" href="/"><span class="mark-pin" aria-hidden="true"></span>Skyline Map</a>
+      <nav aria-label="Site"><a href="/blog/">Blog</a><a href="/showcase">Tour</a></nav>
+      <a class="btn btn-primary btn-sm" href="/">Open your export</a>
+    </div>
+  </header>
+
+  <main id="main" class="container post">
+    <h1>Privacy</h1>
+    <p class="lead">Skyline Map counts visits with Google Analytics, but only if you say yes. Here is exactly what that means.</p>
+    <div class="prose">
+      <h2>Your map files stay on your computer</h2>
+      <p>When you open a <code>.cslmap</code> file, it is read and drawn inside your browser. It is never uploaded, and nothing about your city (names, roads, routes you plan) is sent anywhere, with or without analytics.</p>
+
+      <h2>If you click "Sure"</h2>
+      <p>Google Analytics loads and sets two cookies, <code>_ga</code> and <code>_ga_123XJYCYYP</code>, which last up to two years. They let us tell new visitors from returning ones. With them, we see:</p>
+      <ul>
+        <li><b>Visits:</b> which pages are viewed, how long people stay, and whether they come back.</li>
+        <li><b>How people find the site:</b> for example Google search, Reddit, or a direct link.</li>
+        <li><b>Rough context:</b> country and city (worked out from your IP address, which Google Analytics doesn't store), device type, browser, operating system, screen size and language.</li>
+        <li><b>A few page interactions:</b> scrolling to the bottom of a page, clicks on links to other sites, and file downloads.</li>
+      </ul>
+      <p>We don't see who you are, and we don't track what you do inside a map after it loads: panning, searching, directions and settings send nothing.</p>
+      <p>Google processes this data under its own terms. See <a href="https://policies.google.com/technologies/partner-sites" rel="noopener">how Google uses information from sites that use its services</a>.</p>
+
+      <h2>If you click "No thanks"</h2>
+      <p>Google Analytics never loads and no analytics cookies are set. Everything on the site works the same.</p>
+
+      <h2>Other things kept in your browser</h2>
+      <p>Your language, map options, the prices you set for tolls and fares, and your cookie choice are saved in your browser's own storage so they are there next time. They stay on your device and are never sent to us.</p>
+
+      <h2>Change your choice</h2>
+      <p>You can change your mind at any time. Declining after accepting turns analytics off and deletes its cookies.</p>
+      <p><button type="button" class="btn btn-primary" data-consent>Change cookie choice</button></p>
+
+      <h2 lang="ko">한국어 요약</h2>
+      <div lang="ko" class="prose">
+        <p>지도 파일은 브라우저 안에서만 읽히며 어디에도 업로드되지 않습니다.</p>
+        <p>"좋아요"를 누르면 Google 애널리틱스가 쿠키(<code>_ga</code>, <code>_ga_123XJYCYYP</code>, 최대 2년)를 사용해 방문 페이지와 머문 시간, 재방문 여부, 유입 경로(검색, 링크 등), 대략적인 지역(IP로 추정하며 IP는 저장하지 않음), 기기·브라우저·언어, 페이지 끝까지 스크롤, 외부 링크 클릭을 수집합니다. 지도를 연 뒤 앱 안에서 하는 일은 수집하지 않습니다.</p>
+        <p>"아니요"를 누르면 애널리틱스를 불러오지 않으며 쿠키도 만들지 않습니다. 선택은 위 버튼이나 앱 메뉴의 "쿠키 설정"에서 언제든 바꿀 수 있습니다.</p>
+      </div>
+    </div>
+  </main>
+  <footer class="foot">
+    <div class="container foot-in">
+      <a class="mark" href="/"><span class="mark-pin" aria-hidden="true"></span>Skyline Map</a>
+      <p>A free map viewer for Cities: Skylines CSLMapView exports. Screenshots are the live app; place names in them are shown in English.</p>
+      <nav aria-label="Footer"><a href="/">Open the app</a><a href="/blog/">Blog</a><a href="/showcase">Tour</a><a href="/privacy">Privacy</a></nav>
+    </div>
+  </footer>
+</body>
+</html>

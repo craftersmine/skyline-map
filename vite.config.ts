@@ -72,7 +72,7 @@ export default defineConfig({
     target: 'es2022', chunkSizeWarningLimit: 2000,
     rollupOptions: {
       input: {
-        main: path.resolve(__dirname, 'index.html'), showcase: path.resolve(__dirname, 'showcase.html'), notFound: path.resolve(__dirname, '404.html'),
+        main: path.resolve(__dirname, 'index.html'), showcase: path.resolve(__dirname, 'showcase.html'), notFound: path.resolve(__dirname, '404.html'), privacy: path.resolve(__dirname, 'privacy.html'),
         // every blog/*.html is a page, served at /blog/<name>
         ...Object.fromEntries(fs.readdirSync(path.resolve(__dirname, 'blog')).filter((f) => f.endsWith('.html')).map((f) => [`blog-${f.slice(0, -5)}`, path.resolve(__dirname, 'blog', f)])),
       },
