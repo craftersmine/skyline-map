@@ -81,6 +81,11 @@ def card(p, tag='h2', sizes='(min-width: 50rem) 300px, 100vw'):
         </a></li>'''
 
 
+def new_tab(h):
+    # links in a post's text open in a new tab, so the reader keeps their place
+    return h.replace(' rel="noopener"', '').replace('<a href="', '<a target="_blank" rel="noopener" href="')
+
+
 for i, p in enumerate(POSTS):
     url = f"{SITE}/blog/{p['slug']}"
     ld = [
@@ -101,13 +106,13 @@ for i, p in enumerate(POSTS):
       <h1>{e(p['title'])}</h1>
       <p class="lead">{e(p['lead'])}</p>
       <p class="meta"><time datetime="{DATE}">{DATE_H}</time></p>
-      <div class="prose">{p['body'].rstrip()}
+      <div class="prose">{new_tab(p['body']).rstrip()}
       </div>
     </article>
     <aside class="cta" aria-labelledby="cta-h">
       <h2 id="cta-h">Open your city as a map.</h2>
       <p>Free, in your browser. Your file is read on your computer and never uploaded.</p>
-      <a class="btn btn-primary" href="/">Open your export</a>
+      <a class="btn btn-primary" href="/" target="_blank" rel="noopener">Open your export</a>
     </aside>
     <aside class="related" aria-labelledby="rel-h">
       <h2 id="rel-h">More guides</h2>
