@@ -129,12 +129,18 @@
     <div class="welcome-card">
       <div class="welcome-top"><h1 class="brand big"><span class="logo"></span>Skyline Map</h1><div class="lang-switch" role="radiogroup" aria-label="Language"></div></div>
       <p class="lede" data-i18n="Cartographic viewer for Cities: Skylines CSLMapView exports.">Cartographic viewer for Cities: Skylines CSLMapView exports.</p>
+      <div id="recentMaps" hidden></div>
       <label class="dropzone" id="dropzone">
         <input type="file" id="fileInput" hidden />
         <svg viewBox="0 0 24 24"><path d="M19.4 10A7.5 7.5 0 0 0 5.4 8 6 6 0 0 0 6 20h13a5 5 0 0 0 .4-10zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
         <span><b data-i18n="Drop a .cslmap file">Drop a .cslmap file</b> <span data-i18n="or click to browse">or click to browse</span></span>
         <span class="muted small" data-i18n=".cslmap and .cslmap.gz supported">.cslmap and .cslmap.gz supported</span>
       </label>
+      <button class="tour-link sample-link" id="sampleBtn" type="button">
+        <span class="sample-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M15 11V5l-3-3-3 3v2H3v14h18V11h-6zm-8 8H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm6 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V9h2v2zm0-4h-2V5h2v2zm6 12h-2v-2h2v2zm0-4h-2v-2h2v2z"/></svg></span>
+        <span class="tour-text"><b data-i18n="Try a sample city">Try a sample city</b><span data-i18n="No export yet? Open Seorang, a real city of 9,600 buildings and 37 transit lines.">No export yet? Open Seorang, a real city of 9,600 buildings and 37 transit lines.</span></span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.3 5.3 7.9 6.7l5.3 5.3-5.3 5.3 1.4 1.4 6.7-6.7z"/></svg>
+      </button>
       <section id="findFile" class="find-file" aria-label="Where is my file?" data-i18n-aria="Where is my file?">
         <div class="ff-head"><b>Where is my file?</b></div>
         <p class="ff-lede">CSLMapView saves your exports in the CSLMapView folder of your Cities: Skylines install:</p>

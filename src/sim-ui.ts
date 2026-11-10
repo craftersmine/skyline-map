@@ -61,9 +61,9 @@ const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 const num = (v: number) => v.toLocaleString(locale());
 const pct = (v: number) => `${v.toLocaleString(locale(), { maximumFractionDigits: 1 })}%`;
 
-export function createSim(map: MLMap, deps: { worker: Worker; city: () => BuiltCity | null; onOpen: () => void; selectLine: (id: number) => void; toast: (m: string) => void; onRules: () => void }) {
+export function createSim(map: MLMap, deps: { worker: Worker; city: () => BuiltCity | null; onOpen: () => void; selectLine: (id: number) => void; toast: (m: string) => void; onRules: () => void; onLoaded?: (f: File) => void }) {
   const st = {
-    open: false, busy: false, step: '', file: '', id: 0,
+    open: false, busy: false, step: '', file: '', id: 0, src: null as File | null,
     data: null as SimData | null, fail: null as SimFailure | null,
     layer: 'none' as Layer,
     traffic: new Map<number, number>(), bld: new Map<number, number>(), tm: new Map<number, TmSeg>(), lines: new Map<number, SimLine>(),
@@ -92,7 +92,7 @@ export function createSim(map: MLMap, deps: { worker: Worker; city: () => BuiltC
     if (!deps.city()) return;
     // a new attempt replaces the old data, so a failed load never leaves the previous save's values showing
     clear();
-    st.busy = true; st.fail = null; st.file = f.name; st.step = ''; render();
+    st.busy = true; st.fail = null; st.file = f.name; st.src = f; st.step = ''; render();
     const buf = await f.arrayBuffer();
     deps.worker.postMessage({ type: 'sim', id: ++st.id, buffer: buf }, [buf]);
   }
@@ -101,7 +101,7 @@ export function createSim(map: MLMap, deps: { worker: Worker; city: () => BuiltC
     if (m.type === 'simProgress') { st.step = m.step ?? ''; render(); return; }
     st.busy = false;
     const r = m.result!;
-    if (r.ok) { apply(r); deps.toast(t('Simulation data loaded')); if (r.rulesSummary || r.traffic?.ids.length) deps.onRules(); }
+    if (r.ok) { apply(r); deps.toast(t('Simulation data loaded')); if (st.src) deps.onLoaded?.(st.src); if (r.rulesSummary || r.traffic?.ids.length) deps.onRules(); }
     else { st.fail = r; }
     render();
   }
@@ -390,5 +390,7 @@ export function createSim(map: MLMap, deps: { worker: Worker; city: () => BuiltC
     /** re-draw overlays after the style changed */
     refresh() { if (st.data && st.layer !== 'none' && !map.getLayer(st.layer === 'traffic' ? TRAFFIC : RASTER)) draw(); },
     pick: () => { open(); input.click(); },
+    /** load a save kept from an earlier visit */
+    load: (f: File) => load(f),
   };
 }

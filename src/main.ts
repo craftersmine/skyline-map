@@ -20,6 +20,7 @@ import { createSchematic } from './schematic-view';
 import { createContextStore, createContextEditor, moneyField, parseMoney, describeRule } from './context-ui';
 import { bottomSheet, isPhone } from './sheet';
 import { mountFindFile } from './findfile';
+import { listRecent, rememberMap, rememberSave, forget, type Recent } from './recent';
 import { showDistrictGlow, clearDistrictGlow } from './district-glow';
 import { t, tn, initLang, setLang, onLang, applyStatic, getLang, LANGS, locale, type Lang } from './i18n';
 
@@ -101,7 +102,7 @@ let loadT0 = 0;
 worker.onmessage = (e) => {
   const m = e.data;
   if (m.type === 'progress') { $('loadingStep').textContent = t(m.step) + '…'; $('loadingBar').style.width = m.pct + '%'; }
-  else if (m.type === 'error') { $('loading').hidden = true; toast(t('Could not open map: {err}', { err: m.message })); if (!state.city) $('welcome').hidden = false; }
+  else if (m.type === 'error') { pending = null; $('loading').hidden = true; toast(t('Could not open map: {err}', { err: m.message })); if (!state.city) $('welcome').hidden = false; }
   else if (m.type === 'city') showCity(m.city as BuiltCity);
   else if (m.type === 'route') { if (!schem.onRoute(m)) dir.onResult(m); }
   else if (m.type === 'schematic') schem.onMessage(m);
@@ -117,10 +118,26 @@ async function openBuffer(buf: ArrayBuffer, label: string) {
   loadT0 = performance.now();
   worker.postMessage({ type: 'load', buffer: buf }, [buf]);
 }
-async function openFile(f: File) { state.currentFile = ''; await openBuffer(await f.arrayBuffer(), f.name); }
+/** a map opened from a file (or a remembered one): kept in the browser once it opens */
+let pending: { blob: Blob; file: string; save?: Recent['save'] } | null = null;
+/** opening another map: a reload must not bring the sample back */
+const dropSample = () => { const u = new URL(location.href); if (u.searchParams.has('sample')) { u.searchParams.delete('sample'); history.replaceState(null, '', u); } };
+async function openFile(f: File) { dropSample(); state.currentFile = ''; pending = { blob: f, file: f.name }; await openBuffer(await f.arrayBuffer(), f.name); }
+async function openRecent(r: Recent) { dropSample(); state.currentFile = ''; pending = { blob: r.map, file: r.file, save: r.save }; await openBuffer(await r.map.arrayBuffer(), r.file); }
+async function openSample() {
+  pending = null;
+  $('loading').hidden = false; $('loadingTitle').textContent = t('Sample city'); $('loadingStep').textContent = t('Downloading…'); $('loadingBar').style.width = '1%';
+  try {
+    const r = await fetch('/samples/seorang.cslmap.gz');
+    if (!r.ok) throw new Error(r.statusText);
+    state.currentFile = '';
+    await openBuffer(await r.arrayBuffer(), t('Sample city'));
+  } catch (err) { $('loading').hidden = true; toast(t('Failed to load {file}: {err}', { file: t('Sample city'), err: (err as Error).message })); }
+}
 async function openLocal(file: string) {
   $('loading').hidden = false; $('loadingTitle').textContent = file; $('loadingStep').textContent = t('Downloading…'); $('loadingBar').style.width = '1%';
   try {
+    pending = null;
     const r = await fetch('/api/maps/' + encodeURIComponent(file));
     if (!r.ok) throw new Error(r.statusText);
     state.currentFile = file;
@@ -168,6 +185,11 @@ function showCity(city: BuiltCity) {
   void pricing.attach(city);
   schem.reset();
   closePanel();
+  if (pending) {
+    const p = pending; pending = null;
+    void rememberMap(city.meta.name, p.file, city.meta.generated, p.blob);
+    if (p.save) void sim.load(new File([p.save.blob], p.save.file));
+  }
   console.info(`[atlas] ${city.meta.name} ready in ${Math.round(performance.now() - loadT0)} ms`, city.meta.stats);
 }
 
@@ -213,6 +235,33 @@ async function loadLocalList() {
   } catch { /* static hosting: no local listing */ }
 }
 
+const fmtDate = (ms: number) => new Date(ms).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' });
+async function renderRecent() {
+  const box = $('recentMaps'), list = await listRecent();
+  box.hidden = !list.length;
+  if (!list.length) { box.innerHTML = ''; return; }
+  const palette = ['#1a73e8', '#188038', '#e37400', '#a142f4', '#d93025'];
+  box.innerHTML = `<h3>${t('Recent cities')}</h3>` + list.map((r, i) => `
+    <div class="city-group">
+      <div class="city-row" role="button" tabindex="0" data-recent="${esc(r.name)}">
+        <span class="avatar" style="background:${palette[i % palette.length]}">${esc([...r.name][0] ?? '?')}</span>
+        <span class="grow"><div class="cname">${esc(r.name)}</div><div class="cmeta">${esc(t('Opened {date}', { date: fmtDate(r.opened) }))}${r.save ? ' · ' + esc(t('with save')) : ''}</div></span>
+        <button class="forget" data-forget="${esc(r.name)}" title="${esc(t('Forget'))}" aria-label="${esc(t('Forget {city}', { city: r.name }))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button>
+      </div>
+    </div>`).join('') + `<p class="recent-note">${esc(t('Kept in this browser only. Forget a city to remove it.'))}</p>`;
+  box.onclick = async (e) => {
+    const el = e.target as HTMLElement;
+    const f = (el.closest('[data-forget]') as HTMLElement | null)?.dataset.forget;
+    if (f !== undefined) { e.stopPropagation(); await forget(f); return renderRecent(); }
+    const n = (el.closest('[data-recent]') as HTMLElement | null)?.dataset.recent;
+    const r = n !== undefined && list.find((x) => x.name === n);
+    if (r) void openRecent(r);
+  };
+  box.onkeydown = (e) => { if (e.key === 'Enter' && (e.target as HTMLElement).matches('[data-recent]')) (e.target as HTMLElement).click(); };
+}
+$('sampleBtn').onclick = () => { const u = new URL(location.href); u.searchParams.set('sample', ''); history.replaceState(null, '', u); void openSample(); };
+if (new URL(location.href).searchParams.has('sample')) void openSample();
+
 mountFindFile($('findFile'));
 $('fileInput').addEventListener('change', (e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) openFile(f); });
 let dragDepth = 0;
@@ -254,7 +303,7 @@ $('lineList').addEventListener('click', (e) => {
 const openDrawer = () => { $('drawer').hidden = false; $('scrim').hidden = false; };
 const closeDrawer = () => { $('drawer').hidden = true; $('scrim').hidden = true; };
 $('menuBtn').onclick = openDrawer; $('drawerClose').onclick = closeDrawer; $('scrim').onclick = closeDrawer;
-$('openOther').onclick = () => { closeDrawer(); $('welcome').hidden = false; };
+$('openOther').onclick = () => { closeDrawer(); void renderRecent(); $('welcome').hidden = false; };
 $('fitCity').onclick = () => { closeDrawer(); if (state.city) map.fitBounds(state.city.meta.bounds, { padding: 40, bearing: 0, pitch: 0 }); };
 $('exportPng').onclick = () => {
   closeDrawer();
@@ -571,6 +620,7 @@ $('closureMenu').onclick = () => closure.open();
 const sim = createSim(map, {
   worker, toast, city: () => state.city,
   onRules: () => dir.rulesChanged(),
+  onLoaded: (f) => { if (state.city) void rememberSave(state.city.meta.name, f.name, f); },
   selectLine: (id) => selectLine(id, true),
   onOpen: () => { closeDrawer(); closePanel(); hideCtx(); if (dir.isOpen()) dir.close(); if (reach.isActive()) reach.close(); if (measure.isActive()) measure.close(); if (timelapse.isActive()) timelapse.close(); discoveries.close(); closure.close(); },
 });
@@ -778,11 +828,12 @@ onLang(() => {
   if (state.city) { renderDrawer(state.city); cityTexts(state.city); }
   if (!$('panel').hidden) { if (panelRefresh) panelRefresh(); else closePanel(); }
   dir.relang(); measure.refresh(); pricingEd.refresh(); schem.relang(); discoveries.refresh(); closure.refresh();
-  if (!$('welcome').hidden) loadLocalList();
+  if (!$('welcome').hidden) { loadLocalList(); void renderRecent(); }
 });
 renderLangSwitches();
 
 syncUi();
 loadLocalList();
+void renderRecent();
 
 export type { FC };
