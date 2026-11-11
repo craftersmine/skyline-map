@@ -123,7 +123,8 @@ interface BCat { cat: string; poi: string | null; height: number; inset: number 
 function buildingCategory(b: CBuilding, area: number): BCat | null {
   const nm = b.name, srv = b.srv, sub = b.subsrv, ic = b.icls;
   if (/(?<!Concourse )Node Building|invisible|Underground Cable|cable_Data|powerpole|Pillar|pylon|Connection|Boulder|Rock |Ruins|Fence|_anim|Decoration|Taxi Stand|Pole|Marker|Spawn|Dummy|Placeholder|Track$/i.test(nm)) return null;
-  if (/Airplane Path|Ship Path|Metro Track|Train Track/i.test(ic)) return null;
+  // pipe junctions (e.g. Snowfall's "Heating Pipe Junction") are network nodes exported as buildings
+  if (/Airplane Path|Ship Path|Metro Track|Train Track|Pipe/i.test(ic)) return null;
   if (/Concourse Node/i.test(nm)) return { cat: 'transport', poi: null, height: 14, inset: 0.99 }; // airport concourse junction
   if (/Apron/i.test(nm)) return { cat: 'apron', poi: null, height: 0, inset: 1 };                      // aircraft parking: flat tarmac
   const lvl = +(/Level ?(\d)/.exec(ic)?.[1] ?? 1);
