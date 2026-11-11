@@ -1,0 +1,43 @@
+name: Bug report
+description: Something looks wrong or doesn't work
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the sample city
+        2. Get directions from ... to ...
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: city
+    attributes:
+      label: Which city?
+      options:
+        - The sample city (Seorang)
+        - My own export
+        - My own export and save file
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      placeholder: Chrome 140 on Windows 11, Safari on iPhone 16…
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or files
+      description: Screenshots help a lot. Attach a `.cslmap` export only if you're happy for it to be public.

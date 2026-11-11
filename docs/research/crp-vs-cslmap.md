@@ -248,7 +248,7 @@ Criticality is from the audit: **B** = a feature breaks, **Dg** = degrades, **C*
 
 ## Evidence files (scratchpad)
 
-- **Location:** `/private/tmp/claude-501/-Users-hjun1052-Documents-Codes-NormalProjects-cslimap/c5f81f01-f878-4ad8-8e93-e94f3a4911da/scratchpad/save/`.
+- **Location:** a local scratch folder (not in the repository).
 - **Comparisons:** `audit.md`, `cmp_terrain.md`, `cmp_network.md`, `cmp_places.md`, plus their `.py`/`.json`.
 - **Prefab-cache coverage test:** `prefabcache.py`.
 - **Parsers:** `p_*.py`, `cs.py`.

@@ -3,3 +3,9 @@ dist
 .DS_Store
 .wrangler
 .schem
+marketing/
+.env
+.env.*
+.dev.vars
+*.crp
+*.cslmap

@@ -1,13 +1,13 @@
 {
   "name": "skyline-atlas",
   "version": "1.0.0",
-  "description": "Google-Maps-quality viewer for Cities: Skylines CSLMapView exports",
+  "description": "Google-Maps-style viewer for Cities: Skylines CSLMapView exports",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc",
-    "check": "node src/geo.check.ts && node src/context.check.ts && node src/findfile.check.ts",
+    "check": "tsx src/geo.check.ts && tsx src/context.check.ts && tsx src/findfile.check.ts",
     "check:oneway": "tsx tools/oneway-check.ts",
     "deploy": "npm run build && wrangler deploy",
     "check:access": "tsx tools/access-check.ts",
@@ -22,10 +22,11 @@
     "check:tolls": "tsx tools/toll-check.ts",
     "check:groups": "tsx tools/group-check.ts",
     "check:route-geometry": "tsx tools/route-geometry-check.ts",
-    "check:sim": "tsx tools/sim-check.ts"
+    "check:sim": "tsx tools/sim-check.ts",
+    "check:data": "node tools/check-sample.mjs"
   },
   "author": "",
-  "license": "ISC",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "dependencies": {
     "maplibre-gl": "^6.17.0"
@@ -37,5 +38,10 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.6"
   },
-  "private": true
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hjun1052/skyline-map.git"
+  },
+  "homepage": "https://skyline.codz.me"
 }
