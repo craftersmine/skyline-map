@@ -38,20 +38,27 @@ jobs:
       - name: Self-checks
         run: npm run check && npm run check:i18n
       - name: Deploy to Cloudflare
-        run: npx --yes wrangler@4.40.3 deploy
+        id: deploy
+        run: |
+          set -o pipefail
+          npx --yes wrangler@4.40.3 deploy | tee deploy.log
+          echo "version=$(grep -oE 'Current Version ID: [0-9a-f-]+' deploy.log | awk '{print $4}')" >> "$GITHUB_OUTPUT"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      - name: Confirm the live site serves this build
+      # Cloudflare's bot protection answers GitHub's runners with 403, so the check asks Cloudflare which
+      # version serves all traffic instead of fetching the page.
+      - name: Confirm this version serves all traffic
         run: |
-          want=$(basename dist/assets/main-*.js)
-          for i in $(seq 1 18); do
-            got=$(curl -fsS https://skyline.codz.me/ | grep -oE 'main-[A-Za-z0-9_-]+\.js' | head -1 || true)
-            if [ "$got" = "$want" ] && curl -fsS "https://skyline.codz.me/assets/$want" | cmp -s - "dist/assets/$want"; then
-              echo "Live site serves $want"
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "::error::The live site still serves ${got:-nothing} instead of $want"
-          exit 1
+          want="${{ steps.deploy.outputs.version }}"
+          [ -n "$want" ] || { echo "::error::No version ID in the deploy output"; exit 1; }
+          npx --yes wrangler@4.40.3 deployments status --json > status.json
+          node -e '
+            const s = require("./status.json"), want = process.argv[1];
+            const v = s.versions.find((x) => x.version_id === want);
+            if (!v || v.percentage !== 100) { console.error(`::error::Version ${want} is not serving 100% of traffic`, JSON.stringify(s.versions)); process.exit(1); }
+            console.log(`Version ${want} serves 100% of traffic`);
+          ' "$want"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
