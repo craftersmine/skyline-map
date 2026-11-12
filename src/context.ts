@@ -42,6 +42,7 @@ export const CURRENCIES: Currency[] = [
   { code: 'EUR', symbol: '€', decimals: 2, position: 'after', space: true },
   { code: 'JPY', symbol: '¥', decimals: 0, position: 'before', space: false },
   { code: 'GBP', symbol: '£', decimals: 2, position: 'before', space: false },
+  { code: 'RUB', symbol: '₽', decimals: 2, position: 'after', space: true}
 ];
 
 export function defaultCurrency(lang = typeof navigator !== 'undefined' ? navigator.language : 'en-US'): Currency {

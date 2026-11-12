@@ -2,10 +2,11 @@
 // Placeholders: {name}. Korean particles follow the word they attach to:
 // {road|ro} → 서빛로로 / 중앙로로 / 강남대교로, {x|eul} → 을/를, {x|i} → 이/가, {x|eun} → 은/는.
 import { KO } from './i18n-ko';
+import { RU } from './i18n-ru';
 
-export type Lang = 'en' | 'ko';
-export const LANGS: { id: Lang; name: string }[] = [{ id: 'en', name: 'English' }, { id: 'ko', name: '한국어' }];
-const DICTS: Record<Lang, Record<string, string>> = { en: {}, ko: KO };
+export type Lang = 'en' | 'ko' | 'ru';
+export const LANGS: { id: Lang; name: string }[] = [{ id: 'en', name: 'English' }, { id: 'ko', name: '한국어' }, { id: 'ru', name: "Русский"}];
+const DICTS: Record<Lang, Record<string, string>> = { en: {}, ko: KO, ru: RU };
 
 let lang: Lang = 'en';
 const subs = new Set<() => void>();
