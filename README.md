@@ -19,7 +19,7 @@
 - **What if it closes?** Close a road, bridge or station and see which trips and lines break.
 - **City time-lapse:** watch the city grow across older exports.
 - **Save file (optional):** load your `.crp` save for traffic, line ridership, land value, noise, crime and pollution. Directions then follow your TM:PE one-ways, speed limits, U-turn bans and lane arrows, with an optional traffic-aware mode.
-- **English and Korean** interface, desktop and phone layouts.
+- **English, Korean and Russian** interface, desktop and phone layouts.
 
 Everything runs in the browser. Map and save files are read on the visitor's own device and never uploaded. Cities: Skylines 1 only.
 
@@ -62,7 +62,7 @@ The dev server also lists the exports in your CSLMapView folder on the start scr
 
 ## Contributing
 
-Bug reports, ideas and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first: it covers setup, the checks to run, translations and how reviews work. To report a security problem, follow [SECURITY.md](SECURITY.md) instead of opening an issue.
+Bug reports, ideas and pull requests are welcome ([open an issue](https://github.com/hjun1052/skyline-map/issues/new/choose)). Read [CONTRIBUTING.md](CONTRIBUTING.md) first: it covers setup, the checks to run, translations and how reviews work. To report a security problem, follow [SECURITY.md](SECURITY.md) instead of opening an issue.
 
 ## Credits
 
@@ -70,6 +70,7 @@ Bug reports, ideas and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIB
 - Rendering by [MapLibre GL JS](https://maplibre.org/). Font: [Pretendard](https://github.com/orioncactus/pretendard) (SIL OFL 1.1).
 - Lane-arrow rules follow [TM:PE](https://github.com/CitiesSkylinesMods/TMPE)'s behaviour.
 - The sample city is the maintainer's own city, with labels translated to English.
+- Russian translation by [craftersmine](https://github.com/craftersmine).
 
 Cities: Skylines is a trademark of Paradox Interactive. This project is not affiliated with Paradox Interactive or Colossal Order.
 

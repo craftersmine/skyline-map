@@ -833,4 +833,8 @@ export const KO: Record<string, string> = {
   "traffic known for {pct}% of the route": "경로의 {pct}%만 교통 정보 있음",
   "Driving times include the traffic from your save, as an estimate.": "자동차 시간에는 세이브의 교통 상황이 추정치로 반영돼요.",
   "Uses the export's network and the same routing as Directions, with the traffic from your save as an estimate. Lines through the closure are cut there; nothing reroutes them.": "내보낸 파일의 도로·철도망과 길찾기와 같은 경로 계산을 쓰고, 세이브의 교통 상황을 추정치로 반영해요. 막힌 곳을 지나는 노선은 그곳에서 끊기고, 우회 노선은 만들지 않아요.",
+  "Source code on GitHub": "GitHub에서 소스 코드 보기",
+  "Report a bug or suggest an idea": "버그 신고 및 아이디어 제안",
+  "Russian translation:": "러시아어 번역:",
+  "Open source on GitHub": "GitHub 오픈 소스",
 };
