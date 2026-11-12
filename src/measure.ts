@@ -4,7 +4,7 @@
 import type { Map as MLMap, GeoJSONSource, MapMouseEvent } from 'maplibre-gl';
 import { fromLngLat, type XY } from './geo';
 import { elevationAt } from './dem';
-import { t } from './i18n';
+import { t, locale, fmtFixed } from './i18n';
 
 type LL = [number, number];
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -24,12 +24,12 @@ export function createMeasure(map: MLMap, hooks: { onOpen: () => void; onClose: 
   const area = () => { if (!st.closed || st.pts.length < 3) return 0; const p = st.pts.map(xy); let a = 0; for (let i = 0, j = p.length - 1; i < p.length; j = i++) a += (p[j][0] - p[i][0]) * (p[j][1] + p[i][1]); return Math.abs(a / 2); };
 
   const fmtLen = (m: number) => st.imperial
-    ? (m < 1609.344 * 0.1 ? `${Math.round(m * 3.28084).toLocaleString()} ft` : `${(m / 1609.344).toFixed(m < 16093 ? 2 : 1)} mi`)
-    : (m < 1000 ? `${m < 100 ? m.toFixed(1) : Math.round(m)} m` : `${(m / 1000).toFixed(m < 10000 ? 2 : 1)} km`);
+    ? (m < 1609.344 * 0.1 ? `${Math.round(m * 3.28084).toLocaleString(locale())} ft` : `${fmtFixed(m / 1609.344, m < 16093 ? 2 : 1)} mi`)
+    : (m < 1000 ? `${m < 100 ? fmtFixed(m, 1) : Math.round(m)} m` : `${fmtFixed(m / 1000, m < 10000 ? 2 : 1)} km`);
   const fmtArea = (a: number) => st.imperial
-    ? (a < 4046.86 * 0.5 ? `${Math.round(a * 10.7639).toLocaleString()} ft²` : a < 2589988 ? t('{n} acres', { n: (a / 4046.86).toFixed(2) }) : `${(a / 2589988).toFixed(2)} mi²`)
-    : (a < 10000 ? `${Math.round(a).toLocaleString()} m²` : a < 1e6 ? `${(a / 10000).toFixed(2)} ha` : `${(a / 1e6).toFixed(2)} km²`);
-  const fmtH = (m: number) => (st.imperial ? `${Math.round(m * 3.28084).toLocaleString()} ft` : `${Math.round(m).toLocaleString()} m`);
+    ? (a < 4046.86 * 0.5 ? `${Math.round(a * 10.7639).toLocaleString(locale())} ft²` : a < 2589988 ? t('{n} acres', { n: fmtFixed(a / 4046.86, 2) }) : `${fmtFixed(a / 2589988, 2)} mi²`)
+    : (a < 10000 ? `${Math.round(a).toLocaleString(locale())} m²` : a < 1e6 ? `${fmtFixed(a / 10000, 2)} ha` : `${fmtFixed(a / 1e6, 2)} km²`);
+  const fmtH = (m: number) => (st.imperial ? `${Math.round(m * 3.28084).toLocaleString(locale())} ft` : `${Math.round(m).toLocaleString(locale())} m`);
 
   /** Elevation along the path, sampled every ~10 m. */
   function profile() {

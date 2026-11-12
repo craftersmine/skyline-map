@@ -3,28 +3,28 @@
 // {road|ro} → 서빛로로 / 중앙로로 / 강남대교로, {x|eul} → 을/를, {x|i} → 이/가, {x|eun} → 은/는.
 import { KO } from './i18n-ko';
 import { RU } from './i18n-ru';
+import { type Lang, LANGS, LANG_KEY, LANG_EVENT, localeOf, pickLang, savedLang, browserLangs } from './lang';
 
-export type Lang = 'en' | 'ko' | 'ru';
-export const LANGS: { id: Lang; name: string }[] = [{ id: 'en', name: 'English' }, { id: 'ko', name: '한국어' }, { id: 'ru', name: "Русский"}];
-const DICTS: Record<Lang, Record<string, string>> = { en: {}, ko: KO, ru: RU };
+export { type Lang, LANGS };
+/** every language in LANGS needs a table here (English is the key itself) */
+export const DICTS: Record<Lang, Record<string, string>> = { en: {}, ko: KO, ru: RU };
 
 let lang: Lang = 'en';
 const subs = new Set<() => void>();
 export const getLang = () => lang;
 /** BCP 47 locale for dates and numbers */
-export const locale = () => (lang === 'ko' ? 'ko-KR' : 'en-US');
+export const locale = () => localeOf(lang);
+/** a number with exactly `digits` decimals in the UI locale (2.5 / 2,5), without thousands separators like toFixed */
+export const fmtFixed = (v: number, digits: number) => v.toLocaleString(locale(), { minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: false });
 
 export function initLang(): Lang {
-  let saved: string | null = null;
-  try { saved = localStorage.getItem('atlas:lang'); } catch { /* storage blocked */ }
-  const nav = typeof navigator !== 'undefined' ? navigator.language.toLowerCase() : 'en';
-  setLang(saved === 'ko' || saved === 'en' ? saved : nav.startsWith('ko') ? 'ko' : 'en', false);
+  setLang(pickLang(savedLang(), browserLangs()), false);
   return lang;
 }
 export function setLang(l: Lang, save = true) {
   lang = l;
-  if (save) try { localStorage.setItem('atlas:lang', l); } catch { /* ignore */ }
-  if (typeof document !== 'undefined') document.documentElement.lang = l;
+  if (save) try { localStorage.setItem(LANG_KEY, l); } catch { /* ignore */ }
+  if (typeof document !== 'undefined') { document.documentElement.lang = l; document.dispatchEvent(new CustomEvent(LANG_EVENT, { detail: l })); }
   subs.forEach((f) => f());
 }
 export const onLang = (f: () => void) => { subs.add(f); };

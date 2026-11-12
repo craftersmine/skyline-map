@@ -7,6 +7,7 @@
 // fees even when the game renumbered a booth or a line. Entries that match
 // nothing in the current export are kept, not dropped, and the editor shows them.
 // A new kind of context is a new list with its own ref + matcher.
+import { locale } from './i18n';
 
 export interface Currency { code: string; symbol: string; decimals: number; position: 'before' | 'after'; space: boolean }
 /** +amount for every started `everyKm` beyond the previous threshold, up to `uptoKm` (null = no limit) */
@@ -47,7 +48,7 @@ export const CURRENCIES: Currency[] = [
 
 export function defaultCurrency(lang = typeof navigator !== 'undefined' ? navigator.language : 'en-US'): Currency {
   const l = lang.toLowerCase();
-  const code = l.startsWith('ko') ? 'KRW' : l.startsWith('ja') ? 'JPY' : l === 'en-gb' ? 'GBP' : /^(de|fr|es|it|nl|pt-pt|fi|el|sk|sl|et|lv|lt)/.test(l) ? 'EUR' : 'USD';
+  const code = l.startsWith('ko') ? 'KRW' : l.startsWith('ja') ? 'JPY' : l.startsWith('ru') ? 'RUB' : l === 'en-gb' ? 'GBP' : /^(de|fr|es|it|nl|pt-pt|fi|el|sk|sl|et|lv|lt)/.test(l) ? 'EUR' : 'USD';
   return { ...CURRENCIES.find((c) => c.code === code)! };
 }
 
@@ -56,7 +57,7 @@ export function emptyContext(city: string): CityContext {
 }
 
 export function fmtMoney(v: number, c: Currency): string {
-  const n = Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: c.decimals, maximumFractionDigits: c.decimals });
+  const n = Math.abs(v).toLocaleString(locale(), { minimumFractionDigits: c.decimals, maximumFractionDigits: c.decimals });
   const s = c.position === 'before' ? `${c.symbol}${c.space ? ' ' : ''}${n}` : `${n}${c.space ? ' ' : ''}${c.symbol}`;
   return v < 0 ? '−' + s : s;
 }

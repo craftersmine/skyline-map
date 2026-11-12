@@ -5,7 +5,7 @@ import type { Route, Leg, Step, Mode } from './router';
 import { fromLngLat, type XY } from './geo';
 import { iconDataUrl } from './icons';
 import { bottomSheet, isPhone } from './sheet';
-import { t, tn, applyStatic } from './i18n';
+import { t, tn, applyStatic, fmtFixed } from './i18n';
 import type { ContextStore, TollCost, FareCost } from './context-ui';
 
 type LL = [number, number];
@@ -23,7 +23,7 @@ void ['Driving', 'Transit', 'Walking', 'Cycling'];
 const svg = (inner: string, cls = '') => `<svg viewBox="0 0 24 24" class="${cls}">${inner}</svg>`;
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 export const fmtTime = (s: number) => { const m = Math.max(1, Math.round(s / 60)); return m < 60 ? t('{n} min', { n: m }) : m % 60 ? t('{h} hr {n} min', { h: Math.floor(m / 60), n: m % 60 }) : t('{h} hr', { h: m / 60 }); };
-export const fmtDist = (m: number) => (m < 950 ? `${Math.max(10, Math.round(m / 10) * 10)} m` : `${(m / 1000).toFixed(m < 9500 ? 1 : 0)} km`);
+export const fmtDist = (m: number) => (m < 950 ? `${Math.max(10, Math.round(m / 10) * 10)} m` : `${fmtFixed(m / 1000, m < 9500 ? 1 : 0)} km`);
 
 const ARROW = '<path d="M12 21V8"/><path d="m6.5 12.5 5.5-5.5 5.5 5.5"/>';
 function maneuverIcon(m: string): string {

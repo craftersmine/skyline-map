@@ -3,7 +3,7 @@
 // export is drawn, so things demolished since never appear. See history.ts for the matching.
 import type { Map as MLMap, GeoJSONSource, FilterSpecification } from 'maplibre-gl';
 import type { BuiltCity } from './build';
-import { t, locale } from './i18n';
+import { t, locale, fmtFixed } from './i18n';
 
 const TAGGED = ['roads', 'rails', 'lots', 'buildings', 'transit'];
 const HIDDEN = ['places', 'roadLabels']; // labels of places that may not exist yet
@@ -53,7 +53,7 @@ export function createTimelapse(map: MLMap, deps: { worker: Worker; city: () => 
         <button class="icon-btn tl-play" aria-label="${st.playing ? t('Pause') : t('Play')}">${st.playing ? '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>'}</button>
         <input class="tl-range" type="range" min="0" max="${n - 1}" step="1" value="${st.i}" aria-label="${esc(fmtDate(T))}" />
       </div>
-      <div class="m-stats"><div><span>${t('Buildings')}</span><b>${s.blds.toLocaleString(locale())}</b></div><div><span>${t('Road length')}</span><b>${s.km.toFixed(1)} km</b></div></div>
+      <div class="m-stats"><div><span>${t('Buildings')}</span><b>${s.blds.toLocaleString(locale())}</b></div><div><span>${t('Road length')}</span><b>${fmtFixed(s.km, 1)} km</b></div></div>
       <p class="tl-note">${t('Shows when today\'s roads, buildings and lines first appeared; things demolished since aren\'t shown.')} <button class="link-btn" data-a="pick">${t('Load other exports')}</button></p>`;
   }
 
@@ -165,7 +165,7 @@ export function createTimelapse(map: MLMap, deps: { worker: Worker; city: () => 
     const T = st.times[st.i], s = stats(T);
     el.querySelector('.tl-date b')!.textContent = fmtDate(T);
     el.querySelector('.tl-date span')!.textContent = t('Export {i} of {n}', { i: st.i + 1, n: st.times.length });
-    const b = el.querySelectorAll('.m-stats b'); b[0].textContent = s.blds.toLocaleString(locale()); b[1].textContent = s.km.toFixed(1) + ' km';
+    const b = el.querySelectorAll('.m-stats b'); b[0].textContent = s.blds.toLocaleString(locale()); b[1].textContent = fmtFixed(s.km, 1) + ' km';
     el.querySelector('.tl-play')!.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
   });
 
