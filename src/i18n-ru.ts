@@ -9,7 +9,7 @@ export const RU: Record<string, string> = {
   "Clear search": "Очистить поиск",
   "Current city": "Текущий город",
   "Map overlays": "Наложения карт",
-  "Transit": "Общ. транспорт",
+  "Transit": "Транспорт",
   "Bus routes": "Автобусы",
   "Cycling": "Велосипеды",
   "3D buildings": "3D Здания",
