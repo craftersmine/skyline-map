@@ -594,7 +594,7 @@ export const RU: Record<string, string> = {
   "Longest named road": "Самое длинная дорога с названием",
   "{name} runs {len} end to end under one name.": "{name|i} имеет длинну в {len} от начала до конца.",
   "Longest straight": "Самая прямая дорога",
-  "Dead straight for {len}: it never strays more than 4 m off a ruler line.": "Не поворачивает на протяжении в {len}, она не отклоняется больше чем на 4 м.",
+  "Dead straight for {len}: it never strays more than 4 m off a ruler line.": "Не поворачивает на протяжении в {len}, она также не отклоняется больше чем на 4 м.",
   "Steepest road": "Самая крутая дорога",
   "Climbs {rise} over {len}.": "Поднимается на {rise} на протяжении в {len}.",
   "Highest road": "Самая высокая дорога",
