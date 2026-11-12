@@ -192,6 +192,7 @@ h1.brand { margin: 0; }
 .guides a { color: #1a73e8; font-weight: 600; text-decoration: none; }
 .guides a:hover { text-decoration: underline; }
 .guides a:focus-visible { outline: 2px solid #1a73e8; outline-offset: 2px; border-radius: 2px; }
+.guides-sep { margin: 0 6px; }
 a.menu-item { color: inherit; text-decoration: none; box-sizing: border-box; }
 #localMaps h3, #recentMaps h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #5f6368; margin: 24px 0 8px; font-weight: 600; }
 #localMaps .dir { font-size: 11.5px; color: #80868b; margin: -4px 0 10px; word-break: break-all; }
@@ -772,6 +773,10 @@ body.closure-open .maplibregl-canvas { cursor: crosshair; }
 .lang-switch button + button { border-left: 1px solid var(--line); }
 .lang-switch button.on { background: var(--accent-soft); color: var(--accent); }
 #langSection .lang-switch { margin: 0 20px 6px; }
+.lang-credit { margin: 4px 20px 8px; font-size: 12.5px; color: var(--muted); }
+.lang-credit a { color: var(--accent); text-decoration: none; }
+.lang-credit a:hover { text-decoration: underline; }
+.lang-credit a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
 .welcome-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .welcome-card .lang-switch { border-color: #dadce0; }
 .welcome-card .lang-switch button { color: #5f6368; }

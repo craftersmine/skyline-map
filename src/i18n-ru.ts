@@ -833,4 +833,8 @@ export const RU: Record<string, string> = {
   "traffic known for {pct}% of the route": "{pct}% дорожного движения относится к данному маршруту",
   "Driving times include the traffic from your save, as an estimate.": "Время вождения включает в себя дорожное движение из вашего файла сохранения и является примерным.",
   "Uses the export's network and the same routing as Directions, with the traffic from your save as an estimate. Lines through the closure are cut there; nothing reroutes them.": "Использует дорожные сети из экспортированных данных и такую же маршрутизацию как и Направления, с примерным дорожным движением из вашего файла сохранения. Маршруты через перекрытия срезаны; ничего не перемаршрутизирует их.",
+  "Source code on GitHub": "Исходный код на GitHub",
+  "Report a bug or suggest an idea": "Сообщить об ошибке или предложить идею",
+  "Russian translation:": "Перевод на русский:",
+  "Open source on GitHub": "Открытый исходный код на GitHub",
 };
