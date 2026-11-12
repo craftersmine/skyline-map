@@ -6,7 +6,6 @@ import type { CityData, CSeg } from './parse';
 import type { BuiltCity } from './build';
 import { makeTerrainSampler, modeOf } from './build';
 import { HALF, MAP_SIZE, toLngLat, fromLngLat, polylineLength, type XY } from './geo';
-import { locale, fmtFixed } from './i18n';
 
 export type DiscoveryCat = 'transit' | 'roads' | 'land' | 'buildings' | 'quirks';
 type GeoFeature = { type: 'Feature'; properties: { role: 'line' | 'area' | 'point' | 'pin' }; geometry: { type: string; coordinates: unknown } };
@@ -43,10 +42,10 @@ export interface DiscoveryResult {
 }
 
 // ------------------------------------------------------------------ formatting
-const n0 = (v: number) => Math.round(v).toLocaleString(locale());
+const n0 = (v: number) => Math.round(v).toLocaleString('en-US');
 export function fmtLen(m: number): [string, string] {
   if (m < 1000) return [n0(m), 'm'];
-  return [fmtFixed(m / 1000, m < 10000 ? 2 : 1), 'km'];
+  return [(m / 1000).toFixed(m < 10000 ? 2 : 1), 'km'];
 }
 const lenText = (m: number) => fmtLen(m).join(' ');
 
@@ -435,7 +434,7 @@ export function discover(city: CityData, built: BuiltCity): DiscoveryResult {
       // i18n-keys
       void ['Steepest road', 'Climbs {rise} over {len}.'];
       // end i18n-keys
-      push({ id: 'steep', cat: 'roads', icon: 'steep', title: 'Steepest road', value: fmtFixed(best.g * 100, 1), unit: '%', subject: roadName(best.s) || 'Unnamed road', subjectKey: !roadName(best.s),
+      push({ id: 'steep', cat: 'roads', icon: 'steep', title: 'Steepest road', value: (best.g * 100).toFixed(1), unit: '%', subject: roadName(best.s) || 'Unnamed road', subjectKey: !roadName(best.s),
         note: 'Climbs {rise} over {len}.', params: { rise: n0(rise) + ' m', len: lenText(best.len) }, geom: [lineF(p)], bbox: bboxOf(p, 200) });
     }
   }
@@ -583,8 +582,8 @@ export function discover(city: CityData, built: BuiltCity): DiscoveryResult {
       // i18n-keys
       void ['Biggest footprint', 'Covers {a} of ground, about {f} football pitches.'];
       // end i18n-keys
-      push({ id: 'footprint', cat: 'buildings', icon: 'building', title: 'Biggest footprint', value: area >= 1e5 ? fmtFixed(area / 1e4, 1) : n0(area), unit: area >= 1e5 ? 'ha' : 'm²', subject: head.name,
-        note: 'Covers {a} of ground, about {f} football pitches.', params: { a: n0(area) + ' m²', f: fmtFixed(area / 7140, 1) }, geom: big.map((l) => areaF(l.ring)), bbox: bboxOf(big.flatMap((l) => l.ring), 120) });
+      push({ id: 'footprint', cat: 'buildings', icon: 'building', title: 'Biggest footprint', value: area >= 1e5 ? (area / 1e4).toFixed(1) : n0(area), unit: area >= 1e5 ? 'ha' : 'm²', subject: head.name,
+        note: 'Covers {a} of ground, about {f} football pitches.', params: { a: n0(area) + ' m²', f: (area / 7140).toFixed(1) }, geom: big.map((l) => areaF(l.ring)), bbox: bboxOf(big.flatMap((l) => l.ring), 120) });
       const [, most] = [...groups].reduce((a, b) => (b[1].length > a[1].length ? b : a));
       if (most.length >= 8) {
         const h = most.find((l) => !l.part) ?? most[0];
