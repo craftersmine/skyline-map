@@ -81,7 +81,15 @@ export function createDiscoveries(map: MLMap, deps: { onOpen: () => void }) {
     return `${a ? `<small>${esc(a.trim())}</small>` : ''}<b>${esc(fmtNum(d.value))}</b>${b ? `<small>${esc(b.trim())}</small>` : ''}`;
   };
   const subjectOf = (d: Discovery) => (d.subjectKey ? t(d.subject) : d.subject);
-  const noteOf = (d: Discovery) => t(d.note, d.params);
+  // the worker writes numbers in en-US form ("1,234 m", "2.50 km"); localise the numeric params. Keys that
+  // usually hold names ('a' is a stop in some notes, an area in others) only count when the value has a unit,
+  // so a stop or line called "1001" is never reformatted.
+  const NAMES = new Set(['line', 'lines', 'a', 'b', 'low', 'name', 'other', 'list']);
+  const fmtParam = (k: string, v: string) => {
+    const m = /^(\d[\d,]*(?:\.\d+)?)(\s*(?:m²|km|m|%))?$/.exec(v);
+    return m && (m[2] || !NAMES.has(k)) ? fmtNum(m[1]) + (m[2] ?? '') : v;
+  };
+  const noteOf = (d: Discovery) => t(d.note, d.params && Object.fromEntries(Object.entries(d.params).map(([k, v]) => [k, fmtParam(k, String(v))])));
   const items = () => (st.data?.items ?? []).filter((d) => st.cat === 'all' || d.cat === st.cat);
   const ordered = () => CATS.flatMap((c) => (st.data?.items ?? []).filter((d) => d.cat === c));
 

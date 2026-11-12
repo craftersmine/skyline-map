@@ -22,7 +22,7 @@ import { bottomSheet, isPhone } from './sheet';
 import { mountFindFile } from './findfile';
 import { listRecent, rememberMap, rememberSave, forget, type Recent } from './recent';
 import { showDistrictGlow, clearDistrictGlow } from './district-glow';
-import { t, tn, initLang, setLang, onLang, applyStatic, getLang, LANGS, locale, type Lang } from './i18n';
+import { t, tn, initLang, setLang, onLang, applyStatic, getLang, LANGS, locale, fmtFixed, type Lang } from './i18n';
 
 initLang();
 applyStatic();
@@ -218,7 +218,7 @@ async function loadLocalList() {
       <div class="city-group">
         <div class="city-row" role="button" tabindex="0" data-file="${esc(list[0].file)}">
           <span class="avatar" style="background:${palette[gi % palette.length]}">${esc([...city][0] ?? '?')}</span>
-          <span class="grow"><div class="cname">${esc(city)}</div><div class="cmeta">${t('Latest {date}', { date: fmt(list[0].mtime) })} · ${(list[0].size / 1e6).toFixed(1)} MB${list.length > 1 ? ` · ${tn(list.length, '{n} save', '{n} saves')}` : ''}</div></span>
+          <span class="grow"><div class="cname">${esc(city)}</div><div class="cmeta">${t('Latest {date}', { date: fmt(list[0].mtime) })} · ${fmtFixed(list[0].size / 1e6, 1)} MB${list.length > 1 ? ` · ${tn(list.length, '{n} save', '{n} saves')}` : ''}</div></span>
           ${list.length > 1 ? `<button class="more" data-toggle>${t('History')}</button>` : ''}
         </div>
         <div class="versions" hidden>${list.map((m) => `<button class="version" data-file="${esc(m.file)}"><span>${esc(m.file)}</span><span>${fmt(m.mtime)}</span></button>`).join('')}</div>
@@ -278,7 +278,7 @@ window.addEventListener('drop', (e) => {
 const fmtGenerated = (raw: string) => { const d = new Date(raw); return isNaN(+d) ? raw : d.toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' }); };
 function renderDrawer(city: BuiltCity) {
   const s = city.meta.stats;
-  const n = (v: number | undefined) => (v ?? 0).toLocaleString();
+  const n = (v: number | undefined) => (v ?? 0).toLocaleString(locale());
   $('cityInfo').innerHTML = `
     <div class="city-title">${esc(city.meta.name)}</div>
     <div class="city-meta">${t('Saved {date}', { date: esc(fmtGenerated(city.meta.generated)) })}${state.currentFile ? ' · ' + esc(state.currentFile) : ''}</div>
@@ -477,7 +477,7 @@ function showDistrict(name: string) {
   const by = (cat: string) => blds.filter((f) => String(f.properties.cat).startsWith(cat)).length;
   const stations = c.sources.places.features.filter((f) => f.properties.kind === 'station' && f.properties.name && areas.some((a) => inPoly((f.geometry as any).coordinates, a.geometry.coordinates))).map((f) => String(f.properties.name));
   const about = (v: number | null) => (v ? '≈ ' + v : null);
-  panel(head(name, t('District, estimated area')) + `<div class="p-rows">${row('Area', area ? '≈ ' + (area / 1e6).toFixed(2) + ' km²' : null)}${row('Buildings', about(blds.length))}${row('Residential', about(by('residential')))}${row('Commercial / office', about(by('commercial') + by('office')))}${row('Industrial', about(by('industrial')))}${row('Stations', stations.join(', ') || null)}</div>
+  panel(head(name, t('District, estimated area')) + `<div class="p-rows">${row('Area', area ? '≈ ' + fmtFixed(area / 1e6, 2) + ' km²' : null)}${row('Buildings', about(blds.length))}${row('Residential', about(by('residential')))}${row('Commercial / office', about(by('commercial') + by('office')))}${row('Industrial', about(by('industrial')))}${row('Stations', stations.join(', ') || null)}</div>
     <p class="p-note">${t('The export has no district boundaries. This area is estimated from the district label and the transit stops that record it, so its edges and counts are approximate.')}</p>`, '#7d5fc4');
 }
 function ringAreaLL(r: [number, number][]) { let a = 0; for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const p = fromLngLat(r[i][0], r[i][1]), q = fromLngLat(r[j][0], r[j][1]); a += (q[0] - p[0]) * (q[1] + p[1]); } return a / 2; }
@@ -725,7 +725,7 @@ function choose(s: SearchEntry) {
     if (f) {
       const p = f.properties;
       const len = Math.round(all.reduce((t, x) => t + lineLen(x.geometry.coordinates), 0));
-      panel(head(s.name, L(p.cls) ?? t('Road')) + `<div class="p-rows">${row('Road type', p.type)}${row('Total length', len > 1000 ? (len / 1000).toFixed(2) + ' km' : len + ' m')}${row('Segments', all.length)}</div>`);
+      panel(head(s.name, L(p.cls) ?? t('Road')) + `<div class="p-rows">${row('Road type', p.type)}${row('Total length', len > 1000 ? fmtFixed(len / 1000, 2) + ' km' : len + ' m')}${row('Segments', all.length)}</div>`);
     }
   } else {
     map.once('moveend', () => {

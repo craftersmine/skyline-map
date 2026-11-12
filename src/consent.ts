@@ -1,5 +1,6 @@
 // Cookie consent + Google Analytics. GA loads only after the visitor accepts, so nothing is set before that
 // (and never on localhost). Any element with [data-consent] reopens the banner to change the choice.
+import { type Lang, LANG_EVENT, isLang, pickLang, savedLang, browserLangs } from './lang';
 const GA_ID = 'G-123XJYCYYP';
 const KEY = 'atlas:consent';
 const LIVE = location.hostname === 'skyline.codz.me';
@@ -8,14 +9,14 @@ type Choice = 'granted' | 'denied';
 const read = (): Choice | null => { try { const v = localStorage.getItem(KEY); return v === 'granted' || v === 'denied' ? v : null; } catch { return null; } };
 const save = (c: Choice) => { try { localStorage.setItem(KEY, c); } catch { /* storage blocked: ask again next visit */ } };
 
-const ko = (() => {
-  let l: string | null = null;
-  try { l = localStorage.getItem('atlas:lang'); } catch { /* ignore */ }
-  return (l ?? navigator.language).toLowerCase().startsWith('ko');
-})();
-const TEXT = ko
-  ? { msg: '방문 수를 세고 유용한 정보를 수집해도 될까요? 분석 쿠키로 무엇을 개선할지 알 수 있어요.', more: '자세히', yes: '좋아요', no: '아니요' }
-  : { msg: 'Mind if we count visits and get some useful info? Analytics cookies help us see what to improve.', more: 'Details', yes: 'Sure', no: 'No thanks' };
+// Banner text lives here rather than in the i18n tables so the blog, privacy and 404 pages don't load them.
+// Record<Lang, …> makes a new language in src/lang.ts fail to compile until it has banner text.
+const TEXT: Record<Lang, { msg: string; more: string; yes: string; no: string }> = {
+  en: { msg: 'Mind if we count visits and get some useful info? Analytics cookies help us see what to improve.', more: 'Details', yes: 'Sure', no: 'No thanks' },
+  ko: { msg: '방문 수를 세고 유용한 정보를 수집해도 될까요? 분석 쿠키로 무엇을 개선할지 알 수 있어요.', more: '자세히', yes: '좋아요', no: '아니요' },
+  ru: { msg: 'Можно мы будем считать посещения и собирать немного полезной информации? Аналитические файлы cookie помогают понять, что улучшить.', more: 'Подробнее', yes: 'Хорошо', no: 'Нет, спасибо' },
+};
+let lang: Lang = pickLang(savedLang(), browserLangs());
 
 declare global { interface Window { dataLayer?: unknown[]; gtag?: (...a: unknown[]) => void } }
 
@@ -59,12 +60,18 @@ const STYLE = `
 .cc button:focus-visible{outline:2px solid #1a73e8;outline-offset:2px}`;
 
 let el: HTMLElement | null = null;
+function fill() {
+  if (!el) return;
+  const s = TEXT[lang];
+  el.lang = lang;
+  el.innerHTML = `<p>${s.msg} <a href="/privacy" target="_blank" rel="noopener">${s.more}</a></p><div><button type="button" class="n">${s.no}</button><button type="button" class="y">${s.yes}</button></div>`;
+}
 function show() {
   if (el) return;
   if (!document.getElementById('cc-css')) { const st = document.createElement('style'); st.id = 'cc-css'; st.textContent = STYLE; document.head.appendChild(st); }
   el = document.createElement('div');
   el.className = 'cc'; el.setAttribute('role', 'region'); el.setAttribute('aria-label', 'Cookies');
-  el.innerHTML = `<p>${TEXT.msg} <a href="/privacy" target="_blank" rel="noopener">${TEXT.more}</a></p><div><button type="button" class="n">${TEXT.no}</button><button type="button" class="y">${TEXT.yes}</button></div>`;
+  fill();
   el.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest('button');
     if (!b) return;
@@ -79,6 +86,8 @@ function show() {
 const choice = read();
 if (choice === 'granted') loadGA();
 else if (!choice) show();
+// the app's language switch: re-word an open banner
+document.addEventListener(LANG_EVENT, (e) => { const l = (e as CustomEvent).detail; if (isLang(l)) { lang = l; fill(); } });
 document.addEventListener('click', (e) => {
   if (!(e.target as HTMLElement).closest('[data-consent]')) return;
   e.preventDefault(); show();
