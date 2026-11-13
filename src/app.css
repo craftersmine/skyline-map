@@ -193,7 +193,6 @@ h1.brand { margin: 0; }
 .guides a:hover { text-decoration: underline; }
 .export-guide { margin: 8px 2px 0; font-size: 13px; text-align: center; }
 .export-guide a { color: #1a73e8; font-weight: 600; text-decoration: none; }
-:root[data-theme='dark'] .export-guide a { color: #8ab4f8; }
 .export-guide a:hover { text-decoration: underline; }
 .export-guide a:focus-visible { outline: 2px solid #1a73e8; outline-offset: 2px; border-radius: 2px; }
 .guides a:focus-visible { outline: 2px solid #1a73e8; outline-offset: 2px; border-radius: 2px; }
