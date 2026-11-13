@@ -860,4 +860,18 @@ export const KO: Record<string, string> = {
   "You will arrive at your destination": "목적지에 도착합니다",
   "This route is too short to simulate": "이 경로는 너무 짧아 모의 주행을 할 수 없습니다",
   "How to export your city with CSLMapView": "CSLMapView로 도시 내보내는 방법(영어)",
+  // imperial units
+  "In {n} feet, {instruction}": "{n}피트 앞에서 {instruction}",
+  "In {n} miles, {instruction}": "{n}마일 앞에서 {instruction}",
+  "Speed limit {n} mph": "제한 속도 {n}mph",
+  "mi of road": "mi 도로",
+  "mi of rail": "mi 철도",
+  "{v} acres": "{v}에이커",
+  "{v} ft above sea": "해발 {v} ft",
+  "{v} ft below ground": "지하 {v} ft",
+  "{v} ft below sea": "해수면 아래 {v} ft",
+  "{v} ft deep": "수심 {v} ft",
+  "{v} ft": "{v} ft",
+  "{v} ft²": "{v} ft²",
+  "{v} mi": "{v} mi",
 };

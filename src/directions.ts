@@ -6,6 +6,7 @@ import { fromLngLat, type XY } from './geo';
 import { iconDataUrl } from './icons';
 import { bottomSheet, isPhone } from './sheet';
 import { t, tn, applyStatic, fmtFixed } from './i18n';
+import { fmtDist, onUnits } from './units';
 import type { ContextStore, TollCost, FareCost } from './context-ui';
 
 type LL = [number, number];
@@ -23,7 +24,7 @@ void ['Driving', 'Transit', 'Walking', 'Cycling'];
 const svg = (inner: string, cls = '') => `<svg viewBox="0 0 24 24" class="${cls}">${inner}</svg>`;
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 export const fmtTime = (s: number) => { const m = Math.max(1, Math.round(s / 60)); return m < 60 ? t('{n} min', { n: m }) : m % 60 ? t('{h} hr {n} min', { h: Math.floor(m / 60), n: m % 60 }) : t('{h} hr', { h: m / 60 }); };
-export const fmtDist = (m: number) => (m < 950 ? `${Math.max(10, Math.round(m / 10) * 10)} m` : `${fmtFixed(m / 1000, m < 9500 ? 1 : 0)} km`);
+export { fmtDist };
 
 const SIM_ICON = '<path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z"/>';
 /** the navigation simulation follows a driving route's roads (spans) */
@@ -142,6 +143,7 @@ export function createDirections(d: DirectionsDeps) {
     st.results = {}; d.onClose();
   }
   const isOpen = () => !el.hidden;
+  onUnits(() => { if (isOpen()) render(); });
 
   function setPoint(which: 'from' | 'to', p: Place) {
     st[which] = p;

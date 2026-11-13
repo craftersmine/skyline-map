@@ -5,6 +5,7 @@ import * as maplibregl from 'maplibre-gl';
 import type { Map as MLMap, GeoJSONSource } from 'maplibre-gl';
 import { HALF, toLngLat, fromLngLat, type XY } from './geo';
 import { t, locale, fmtFixed } from './i18n';
+import { fmtArea, fmtLength as fmtLen } from './units';
 import { bottomSheet, isPhone } from './sheet';
 import type { ClosurePick, ClosureResult, Trip } from './closure';
 import type { ReachGrid } from './reach';
@@ -77,8 +78,6 @@ export function createClosure(map: MLMap, deps: { worker: Worker; land: () => Di
   marker.on('dragend', () => { const p = marker.getLngLat(); st.pin = [p.lng, p.lat]; requestReach(); });
 
   const mins = (s: number) => Math.max(1, Math.round(s / 60));
-  const fmtLen = (m: number) => (m < 1000 ? `${Math.round(m)} m` : `${fmtFixed(m / 1000, m < 10000 ? 2 : 1)} km`);
-  const fmtArea = (m2: number) => (m2 < 1e6 ? `${fmtFixed(m2 / 1e4, 1)} ha` : `${fmtFixed(m2 / 1e6, m2 < 1e7 ? 2 : 1)} km²`);
   const title = (r: ClosureResult) => (r.titleKey ? t(r.title) : r.title);
 
   // ---------------------------------------------------------------- panel

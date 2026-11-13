@@ -20,7 +20,7 @@
 - **What if it closes?** Close a road, bridge or station and see which trips and lines break.
 - **City time-lapse:** watch the city grow across older exports.
 - **Save file (optional):** load your `.crp` save for traffic, line ridership, land value, noise, crime and pollution. Directions then follow your TM:PE one-ways, speed limits, U-turn bans and lane arrows, with an optional traffic-aware mode.
-- **English, Korean and Russian** interface, desktop and phone layouts.
+- **English, Korean and Russian** interface, desktop and phone layouts, with metric or imperial units.
 
 Everything runs in the browser. Map and save files are read on the visitor's own device and never uploaded. Cities: Skylines 1 only.
 

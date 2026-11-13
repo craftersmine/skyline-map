@@ -5,6 +5,7 @@
 import * as maplibregl from 'maplibre-gl';
 import type { Map as MLMap, GeoJSONSource } from 'maplibre-gl';
 import { t, locale } from './i18n';
+import { imperial, CONVERT } from './units';
 import { bottomSheet, isPhone } from './sheet';
 import type { Discovery, DiscoveryResult, DiscoveryCat } from './discover';
 
@@ -16,8 +17,21 @@ const UNITS: Record<string, string> = {
   m: '{v} m', km: '{v} km', '%': '{v}%', 'm²': '{v} m²', ha: '{v} ha', lines: '{v} lines', roads: '{v} roads', lanes: '{v} lanes', parts: '{v} parts', copies: '{v} copies',
   place: '{v} place', places: '{v} places', island: '{v} island', islands: '{v} islands', station: '{v} station', stations: '{v} stations', characters: '{v} characters',
   'm below ground': '{v} m below ground', 'm above sea': '{v} m above sea', 'm below sea': '{v} m below sea', 'm deep': '{v} m deep',
+  ft: '{v} ft', mi: '{v} mi', 'ft²': '{v} ft²', acres: '{v} acres',
+  'ft below ground': '{v} ft below ground', 'ft above sea': '{v} ft above sea', 'ft below sea': '{v} ft below sea', 'ft deep': '{v} ft deep',
 };
+/** The worker writes metric figures in en-US form; with imperial units they become feet, miles, ft² or acres (still en-US). */
+const IMPERIAL: Record<string, [string, number, number]> = { // unit → [imperial unit, factor, decimals]
+  m: ['ft', CONVERT.ft, 0], km: ['mi', CONVERT.mi, 2], 'm²': ['ft²', CONVERT.ft2, 0], ha: ['acres', CONVERT.acres, 1],
+  'm below ground': ['ft below ground', CONVERT.ft, 0], 'm above sea': ['ft above sea', CONVERT.ft, 0], 'm below sea': ['ft below sea', CONVERT.ft, 0], 'm deep': ['ft deep', CONVERT.ft, 0],
+};
+function inUnits(value: string, unit: string): [string, string] {
+  const c = IMPERIAL[unit], n = Number(value.replace(/,/g, ''));
+  if (!imperial() || !c || !Number.isFinite(n)) return [value, unit];
+  return [(n * c[1]).toLocaleString('en-US', { minimumFractionDigits: c[2], maximumFractionDigits: c[2] }), c[0]];
+}
 // i18n-keys
+void ['{v} ft', '{v} mi', '{v} ft²', '{v} acres', '{v} ft below ground', '{v} ft above sea', '{v} ft below sea', '{v} ft deep', 'mi of road', 'mi of rail'];
 void ['All', 'Transit', 'Roads & bridges', 'Land & water', 'Buildings', 'Oddities', '{v} m', '{v} km', '{v}%', '{v} m²', '{v} ha', '{v} lines', '{v} roads', '{v} lanes', '{v} parts', '{v} copies', '{v} place', '{v} places', '{v} island', '{v} islands', '{v} station', '{v} stations', '{v} characters', '{v} m below ground', '{v} m above sea', '{v} m below sea', '{v} m deep'];
 void ['Play tour', 'Pause tour', 'City discoveries', 'Close', '{n} records found in {city}', 'Previous', 'Next', '{i} of {n}', 'Surprise me', 'near {place}', 'km of road', 'km of rail', 'lines', 'buildings',
   'Every record is measured from your export: lengths, heights and counts. Nothing is guessed.', 'No records stand out in this city yet. Build some more and export again.', 'Finding discoveries'];
@@ -77,8 +91,9 @@ export function createDiscoveries(map: MLMap, deps: { onOpen: () => void }) {
   const fmtNum = (v: string) => { const n = Number(v.replace(/,/g, '')); return Number.isFinite(n) ? n.toLocaleString(locale(), { maximumFractionDigits: v.includes('.') ? v.split('.')[1].length : 0, minimumFractionDigits: v.includes('.') ? v.split('.')[1].length : 0 }) : v; };
   /** value + unit as HTML, the number big; the unit template decides the word order per language */
   const valueHTML = (d: Discovery) => {
-    const tpl = t(UNITS[d.unit] ?? '{v} ' + d.unit), [a, b] = tpl.split('{v}');
-    return `${a ? `<small>${esc(a.trim())}</small>` : ''}<b>${esc(fmtNum(d.value))}</b>${b ? `<small>${esc(b.trim())}</small>` : ''}`;
+    const [value, unit] = inUnits(d.value, d.unit);
+    const tpl = t(UNITS[unit] ?? '{v} ' + unit), [a, b] = tpl.split('{v}');
+    return `${a ? `<small>${esc(a.trim())}</small>` : ''}<b>${esc(fmtNum(value))}</b>${b ? `<small>${esc(b.trim())}</small>` : ''}`;
   };
   const subjectOf = (d: Discovery) => (d.subjectKey ? t(d.subject) : d.subject);
   // the worker writes numbers in en-US form ("1,234 m", "2.50 km"); localise the numeric params. Keys that
@@ -87,7 +102,10 @@ export function createDiscoveries(map: MLMap, deps: { onOpen: () => void }) {
   const NAMES = new Set(['line', 'lines', 'a', 'b', 'low', 'name', 'other', 'list']);
   const fmtParam = (k: string, v: string) => {
     const m = /^(\d[\d,]*(?:\.\d+)?)(\s*(?:m²|km|m|%))?$/.exec(v);
-    return m && (m[2] || !NAMES.has(k)) ? fmtNum(m[1]) + (m[2] ?? '') : v;
+    if (!m || (!m[2] && NAMES.has(k))) return v;
+    if (!m[2]) return fmtNum(m[1]);
+    const [value, unit] = inUnits(m[1], m[2].trim());
+    return fmtNum(value) + m[2].replace(m[2].trim(), unit);
   };
   const noteOf = (d: Discovery) => t(d.note, d.params && Object.fromEntries(Object.entries(d.params).map(([k, v]) => [k, fmtParam(k, String(v))])));
   const items = () => (st.data?.items ?? []).filter((d) => st.cat === 'all' || d.cat === st.cat);
@@ -128,7 +146,7 @@ export function createDiscoveries(map: MLMap, deps: { onOpen: () => void }) {
       <div class="dc-head"><div><b>${t('City discoveries')}</b><span>${esc(t('{n} records found in {city}', { n: r.items.length, city: r.city }))}</span></div>
         <button class="icon-btn" data-a="random" title="${t('Surprise me')}" aria-label="${t('Surprise me')}"><svg viewBox="0 0 24 24"><path d="M10.6 9.2 5.4 4 4 5.4l5.2 5.2zM14.5 4l2 2L4 18.6 5.4 20 18 7.5l2 2V4zm.3 9.4-1.4 1.4 3.1 3.1-2 2H20v-5.5l-2 2z"/></svg></button>
         <button class="icon-btn" data-a="close" aria-label="${t('Close')}"><svg viewBox="0 0 24 24"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6z"/></svg></button></div>
-      ${sel ? spotlight(sel) : `<div class="dc-sum"><span><b>${n(s.roadKm)}</b> ${t('km of road')}</span>${s.railKm ? `<span><b>${n(s.railKm)}</b> ${t('km of rail')}</span>` : ''}${s.lines ? `<span><b>${n(s.lines)}</b> ${t('lines')}</span>` : ''}<span><b>${n(s.buildings)}</b> ${t('buildings')}</span></div><div class="dc-cta"><button class="pill primary" data-a="tour"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>${t('Play tour')}</button></div>`}
+      ${sel ? spotlight(sel) : `<div class="dc-sum"><span><b>${n(imperial() ? Math.round(s.roadKm * CONVERT.mi) : s.roadKm)}</b> ${imperial() ? t('mi of road') : t('km of road')}</span>${s.railKm ? `<span><b>${n(imperial() ? Math.round(s.railKm * CONVERT.mi) : s.railKm)}</b> ${imperial() ? t('mi of rail') : t('km of rail')}</span>` : ''}${s.lines ? `<span><b>${n(s.lines)}</b> ${t('lines')}</span>` : ''}<span><b>${n(s.buildings)}</b> ${t('buildings')}</span></div><div class="dc-cta"><button class="pill primary" data-a="tour"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>${t('Play tour')}</button></div>`}
       <div class="dc-tabs" role="tablist">${tabs.map((c) => `<button role="tab" aria-selected="${st.cat === c}" data-cat="${c}">${esc(t(CAT_NAMES[c]))}<span>${c === 'all' ? r.items.length : counts[c]}</span></button>`).join('')}</div>
       <div class="dc-scroll">${r.items.length ? `<ol class="dc-list">${list}</ol>` : `<p class="dc-empty">${t('No records stand out in this city yet. Build some more and export again.')}</p>`}
         <p class="dc-foot">${t('Every record is measured from your export: lengths, heights and counts. Nothing is guessed.')}</p></div>`;

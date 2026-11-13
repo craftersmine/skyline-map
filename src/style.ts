@@ -1,3 +1,4 @@
+import { imperial, FEET_PER_METRE } from './units';
 import { t } from './i18n';
 import type { StyleSpecification, LayerSpecification, ExpressionSpecification } from 'maplibre-gl';
 
@@ -254,7 +255,7 @@ export function buildStyle(o: StyleOptions, fontBase: string): StyleSpecificatio
     // ---- labels
     {
       id: 'contour-label', type: 'symbol', source: 'contours', minzoom: 13.5, filter: ['==', ['get', 'major'], 1],
-      layout: { visibility: o.contours && o.labels ? 'visible' : 'none', 'symbol-placement': 'line', 'text-field': ['concat', ['to-string', ['get', 'ele']], ' m'], 'text-font': font('Medium'), 'text-size': 10, 'symbol-spacing': 400, 'text-padding': 8 },
+      layout: { visibility: o.contours && o.labels ? 'visible' : 'none', 'symbol-placement': 'line', 'text-field': imperial() ? ['concat', ['to-string', ['round', ['*', ['get', 'ele'], FEET_PER_METRE]]], ' ft'] : ['concat', ['to-string', ['get', 'ele']], ' m'], 'text-font': font('Medium'), 'text-size': 10, 'symbol-spacing': 400, 'text-padding': 8 },
       paint: { 'text-color': p.contourText, 'text-halo-color': p.halo, 'text-halo-width': 1.4 },
     } as LayerSpecification,
     {

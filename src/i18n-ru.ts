@@ -860,4 +860,18 @@ export const RU: Record<string, string> = {
   "You will arrive at your destination": "Вы прибудете к месту назначения",
   "This route is too short to simulate": "Маршрут слишком короткий для симуляции",
   "How to export your city with CSLMapView": "Как экспортировать город с помощью CSLMapView (на английском)",
+  // imperial units
+  "In {n} feet, {instruction}": "Через {n} футов {instruction}",
+  "In {n} miles, {instruction}": "Через {n} мили {instruction}",
+  "Speed limit {n} mph": "Ограничение скорости {n} миль/ч",
+  "mi of road": "mi дороги",
+  "mi of rail": "mi рельс",
+  "{v} acres": "{v} акр(ов)",
+  "{v} ft above sea": "на {v} фт над уровнем моря",
+  "{v} ft below ground": "на {v} фт под землей",
+  "{v} ft below sea": "на {v} фт под уровнем моря",
+  "{v} ft deep": "{v} фт глубины",
+  "{v} ft": "{v} фт",
+  "{v} ft²": "{v} фт²",
+  "{v} mi": "{v} мили",
 };
