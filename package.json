@@ -22,6 +22,7 @@
     "check:tolls": "tsx tools/toll-check.ts",
     "check:groups": "tsx tools/group-check.ts",
     "check:route-geometry": "tsx tools/route-geometry-check.ts",
+    "check:nav": "tsx tools/nav-check.ts",
     "check:sim": "tsx tools/sim-check.ts",
     "check:data": "node tools/check-sample.mjs"
   },
