@@ -859,4 +859,5 @@ export const RU: Record<string, string> = {
   "{first}, then {second}": "{first}, затем {second}",
   "You will arrive at your destination": "Вы прибудете к месту назначения",
   "This route is too short to simulate": "Маршрут слишком короткий для симуляции",
+  "How to export your city with CSLMapView": "Как экспортировать город с помощью CSLMapView (на английском)",
 };

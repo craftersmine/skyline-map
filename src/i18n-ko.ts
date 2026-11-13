@@ -859,4 +859,5 @@ export const KO: Record<string, string> = {
   "{first}, then {second}": "{first}, 이어서 {second}",
   "You will arrive at your destination": "목적지에 도착합니다",
   "This route is too short to simulate": "이 경로는 너무 짧아 모의 주행을 할 수 없습니다",
+  "How to export your city with CSLMapView": "CSLMapView로 도시 내보내는 방법(영어)",
 };
