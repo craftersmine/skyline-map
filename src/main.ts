@@ -727,22 +727,25 @@ function runSearch() {
   }).join('') : `<div class="result-empty">${esc(t('No results for “{q}”', { q: searchInput.value }))}</div>`;
   $('searchbox').classList.add('open');
 }
+/** A whole road picked in search: every segment selected, with its total length. Redraws in place (units, language). */
+function showSearchedRoad(name: string) {
+  const all = state.city!.sources.roads.features.filter((x) => x.properties.name === name) as any[];
+  setSelection(all.map((x) => ({ type: 'Feature', geometry: x.geometry, properties: {} })));
+  const f = all[0];
+  if (!f) return;
+  panelRefresh = () => showSearchedRoad(name);
+  const p = f.properties;
+  const len = Math.round(all.reduce((t, x) => t + lineLen(x.geometry.coordinates), 0));
+  panel(head(name, L(p.cls) ?? t('Road')) + `<div class="p-rows">${row('Road type', p.type)}${row('Total length', panelLen(len))}${row('Segments', all.length)}</div>`);
+}
 function choose(s: SearchEntry) {
   $('searchbox').classList.remove('open');
   searchInput.value = s.name; searchInput.blur();
   if (s.kind === 'line') { const l = state.city!.meta.lines.find((x) => x.name === s.name); if (l) return selectLine(l.id, true); }
   if (s.bbox) map.fitBounds([[s.bbox[0], s.bbox[1]], [s.bbox[2], s.bbox[3]]], { padding: { top: 100, bottom: 60, left: innerWidth > 700 ? 420 : 40, right: 60 }, maxZoom: 16.5 });
   else map.flyTo({ center: s.center, zoom: s.zoom, speed: 1.6 });
-  if (s.kind === 'road') {
-    const all = state.city!.sources.roads.features.filter((x) => x.properties.name === s.name) as any[];
-    setSelection(all.map((x) => ({ type: 'Feature', geometry: x.geometry, properties: {} })));
-    const f = all[0];
-    if (f) {
-      const p = f.properties;
-      const len = Math.round(all.reduce((t, x) => t + lineLen(x.geometry.coordinates), 0));
-      panel(head(s.name, L(p.cls) ?? t('Road')) + `<div class="p-rows">${row('Road type', p.type)}${row('Total length', panelLen(len))}${row('Segments', all.length)}</div>`);
-    }
-  } else {
+  if (s.kind === 'road') showSearchedRoad(s.name);
+  else {
     map.once('moveend', () => {
       const pt = map.project(s.center);
       const f = map.queryRenderedFeatures([[pt.x - 20, pt.y - 20], [pt.x + 20, pt.y + 20]], { layers: ['district-label', 'park-label', 'poi', 'station'].filter((l) => map.getLayer(l)) }).find((x) => x.properties.name === s.name);
