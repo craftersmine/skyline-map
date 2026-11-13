@@ -772,10 +772,11 @@ body.closure-open .maplibregl-canvas { cursor: crosshair; }
 }
 
 /* ---------- language switch ---------- */
-.lang-switch { display: inline-flex; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; flex: none; }
-.lang-switch button { padding: 6px 14px; font-size: 13px; font-weight: 500; color: var(--muted); }
-.lang-switch button + button { border-left: 1px solid var(--line); }
-.lang-switch button.on { background: var(--accent-soft); color: var(--accent); }
+.lang-switch, .unit-switch { display: inline-flex; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; flex: none; }
+.lang-switch button, .unit-switch button { padding: 6px 14px; font-size: 13px; font-weight: 500; color: var(--muted); }
+.lang-switch button + button, .unit-switch button + button { border-left: 1px solid var(--line); }
+.lang-switch button.on, .unit-switch button.on { background: var(--accent-soft); color: var(--accent); }
+#unitsSection .unit-switch { margin: 0 20px 6px; }
 #langSection .lang-switch { margin: 0 20px 6px; }
 .lang-credit { margin: 4px 20px 8px; font-size: 12.5px; color: var(--muted); }
 .lang-credit a { color: var(--accent); text-decoration: none; }

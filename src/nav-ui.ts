@@ -8,6 +8,7 @@ import { toLngLat, type XY } from './geo';
 import { maneuverIcon, fmtDist, fmtTime } from './directions';
 import { isPhone } from './sheet';
 import { t, applyStatic, getLang, locale } from './i18n';
+import { speedValue, speedUnit, imperial, spokenDistance } from './units';
 
 export interface NavDeps {
   map: MLMap;
@@ -31,7 +32,7 @@ const I = {
 };
 const PUCK = `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" fill="#fff"/><circle cx="24" cy="24" r="20" fill="none" stroke="rgba(0,0,0,.12)" stroke-width="1"/><path d="M24 9 35 35l-11-6-11 6z" fill="#1a73e8"/></svg>`;
 // i18n-keys
-void ['Tunnel', 'Bridge / elevated', 'In {n} kilometers, {instruction}', 'In {n} meters, {instruction}'];
+void ['Tunnel', 'Bridge / elevated', 'In {n} kilometers, {instruction}', 'In {n} meters, {instruction}', 'Speed limit {n} mph'];
 // end i18n-keys
 
 export function createNav(d: NavDeps) {
@@ -51,7 +52,7 @@ export function createNav(d: NavDeps) {
     </div>
     <div class="nav-bar card">
       <div class="nav-side">
-        <div class="nav-speed" title="Simulated speed" data-i18n-title="Simulated speed"><b></b><small>km/h</small></div>
+        <div class="nav-speed" title="Simulated speed" data-i18n-title="Simulated speed"><b></b><small class="nav-speed-unit">km/h</small></div>
         <div class="nav-limit" hidden><b></b></div>
       </div>
       <button class="nav-recenter pill" hidden>${I.center}<span data-i18n="Re-center">Re-center</span></button>
@@ -73,7 +74,7 @@ export function createNav(d: NavDeps) {
   applyStatic(el);
   const $ = <T extends HTMLElement>(s: string) => el.querySelector(s) as T;
   const nb = { icon: $('.nb-icon'), dist: $('.nb-dist'), text: $('.nb-text'), banner: $('.nav-banner') };
-  const H = { then: $('.nav-then'), thenIcon: $('.nt-icon'), badge: $('.nav-badge'), road: $('.nav-road'), limit: $('.nav-limit'), limitN: $('.nav-limit b'), speed: $('.nav-speed b'), eta: $('.ne-time'), sub: $('.ne-sub') };
+  const H = { then: $('.nav-then'), thenIcon: $('.nt-icon'), badge: $('.nav-badge'), road: $('.nav-road'), limit: $('.nav-limit'), limitN: $('.nav-limit b'), speed: $('.nav-speed b'), speedUnit: $('.nav-speed-unit'), eta: $('.ne-time'), sub: $('.ne-sub') };
   const progress = $<HTMLInputElement>('.nav-progress'), bar = $<HTMLElement>('.nav-bar'), live = $<HTMLElement>('.nav-live');
 
   const puckEl = document.createElement('div');
@@ -215,9 +216,10 @@ export function createNav(d: NavDeps) {
     set('badge', H.badge, badge);
     set('road', H.road, sp ? sp.name || d.roadLabel(sp.cls) || '' : '');
     H.limit.hidden = !sp?.limit;
-    if (sp?.limit && shown.limit !== String(sp.limit)) { set('limit', H.limitN, String(sp.limit)); H.limit.title = t('Speed limit {n} km/h', { n: sp.limit }); }
+    if (sp?.limit && shown.limit !== String(speedValue(sp.limit))) { set('limit', H.limitN, String(speedValue(sp.limit))); H.limit.title = imperial() ? t('Speed limit {n} mph', { n: speedValue(sp.limit) }) : t('Speed limit {n} km/h', { n: sp.limit }); }
     // the profile can run a touch faster than the route's estimate (k < 1): never show more than the posted limit
-    set('speed', H.speed, String(Math.round(Math.min(kmh(v), sp?.limit ?? Infinity))));
+    set('speed', H.speed, String(speedValue(Math.min(kmh(v), sp?.limit ?? Infinity))));
+    set('speedUnit', H.speedUnit, speedUnit());
     // remaining distance on the route card's scale, time on the route's own estimate
     const remD = Math.max(0, p.total - s) * (p.dist / p.total), remT = Math.max(0, p.physTime - tp) * p.k;
     set('eta', H.eta, arrived ? t('Arrived') : t('Arrive {time}', { time: clock(Math.round((Date.now() + remT * 1000) / 60000) * 60000) }));
@@ -262,7 +264,7 @@ export function createNav(d: NavDeps) {
   if (typeof speechSynthesis !== 'undefined') speechSynthesis.addEventListener?.('voiceschanged', () => { if (!el.hidden) controls(); });
   /** "turn left onto X" inside a sentence: English and Russian lower the first letter, Korean has none */
   const inner = (s: string) => (getLang() === 'ko' ? s : s.charAt(0).toLocaleLowerCase(locale()) + s.slice(1));
-  const spokenDist = (m: number) => (m >= 950 ? { key: 'In {n} kilometers, {instruction}', n: Math.round(m / 100) / 10 } : { key: 'In {n} meters, {instruction}', n: m >= 300 ? Math.round(m / 100) * 100 : Math.max(50, Math.round(m / 50) * 50) });
+  const spokenDist = spokenDistance;
   const phrase = (m: Maneuver) => (m.man === 'arrive' ? t('You will arrive at your destination') : m.text);
   function speak(s: number, v: number) {
     const p = plan!, mi = nextManeuver(p, s), m = p.maneuvers[mi], toMan = m.at - s;
