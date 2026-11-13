@@ -6,6 +6,7 @@ import { fromLngLat, type XY } from './geo';
 import { iconDataUrl } from './icons';
 import { bottomSheet, isPhone } from './sheet';
 import { t, tn, applyStatic, fmtFixed } from './i18n';
+import { fmtDist, onUnits } from './units';
 import type { ContextStore, TollCost, FareCost } from './context-ui';
 
 type LL = [number, number];
@@ -23,10 +24,14 @@ void ['Driving', 'Transit', 'Walking', 'Cycling'];
 const svg = (inner: string, cls = '') => `<svg viewBox="0 0 24 24" class="${cls}">${inner}</svg>`;
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 export const fmtTime = (s: number) => { const m = Math.max(1, Math.round(s / 60)); return m < 60 ? t('{n} min', { n: m }) : m % 60 ? t('{h} hr {n} min', { h: Math.floor(m / 60), n: m % 60 }) : t('{h} hr', { h: m / 60 }); };
-export const fmtDist = (m: number) => (m < 950 ? `${Math.max(10, Math.round(m / 10) * 10)} m` : `${fmtFixed(m / 1000, m < 9500 ? 1 : 0)} km`);
+export { fmtDist };
 
+const SIM_ICON = '<path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z"/>';
+/** the navigation simulation follows a driving route's roads (spans) */
+const canSimulate = (r: Route) => r.mode === 'drive' && !!r.legs[0]?.spans?.length;
+const simButton = (r: Route) => (canSimulate(r) ? `<button class="dc-sim" data-sim>${svg(SIM_ICON)}${t('Start simulation')}</button>` : '');
 const ARROW = '<path d="M12 21V8"/><path d="m6.5 12.5 5.5-5.5 5.5 5.5"/>';
-function maneuverIcon(m: string): string {
+export function maneuverIcon(m: string): string {
   if (m === 'depart') return svg('<circle cx="12" cy="12" r="5" fill="none" stroke-width="2.4"/>', 'man');
   if (m === 'arrive') return svg('<path d="M12 2a7 7 0 0 0-7 7c0 5.3 7 13 7 13s7-7.7 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" stroke="none" fill="#ea4335"/>', 'man');
   if (m === 'uturn') return svg('<path d="M9 21V9a4 4 0 0 1 8 0v4"/><path d="m13.5 10.5 3.5 3.5 3.5-3.5"/>', 'man');
@@ -49,6 +54,9 @@ export interface DirectionsDeps {
   simRules: () => boolean;
   /** a matched save's traffic densities are loaded in the worker's router (see sim/traffic.ts) */
   simTraffic: () => boolean;
+  /** drive a route in the navigation simulation, and whether one is running */
+  simulate: (r: Route, destination: string) => void;
+  simulating: () => boolean;
 }
 
 export function createDirections(d: DirectionsDeps) {
@@ -135,6 +143,7 @@ export function createDirections(d: DirectionsDeps) {
     st.results = {}; d.onClose();
   }
   const isOpen = () => !el.hidden;
+  onUnits(() => { if (isOpen()) render(); });
 
   function setPoint(which: 'from' | 'to', p: Place) {
     st[which] = p;
@@ -190,7 +199,7 @@ export function createDirections(d: DirectionsDeps) {
       if (last) feats.push({ type: 'Feature', properties: { role: 'link' }, geometry: { type: 'LineString', coordinates: [last, st.to.ll] } });
     }
     src.setData({ type: 'FeatureCollection', features: feats });
-    if (fit && r) {
+    if (fit && r && !d.simulating()) {
       const all = r.legs.flatMap((l) => l.coords).concat(st.from ? [st.from.ll] : [], st.to ? [st.to.ll] : []);
       const b = all.reduce((bb, c) => bb.extend(c as LL), new maplibregl.LngLatBounds(all[0] as LL, all[0] as LL));
       const phone = isPhone(), narrow = innerWidth < 700;
@@ -233,13 +242,13 @@ export function createDirections(d: DirectionsDeps) {
         + onewayNote(r) + trafficNote(r);
     return `<div class="dir-card${on ? ' on' : ''}" data-idx="${i}">
       <div class="dc-icon">${svg(icon)}</div>
-      <div class="dc-main">${chips}<div class="dc-sub">${sub}</div>${on && !st.expanded ? `<button class="dc-details" data-details>${t('Details')}</button>` : ''}</div>
+      <div class="dc-main">${chips}<div class="dc-sub">${sub}</div>${on && !st.expanded ? `<div class="dc-actions"><button class="dc-details" data-details>${t('Details')}</button>${simButton(r)}</div>` : ''}</div>
       <div class="dc-time"><b class="${i === 0 ? 'best' : ''}">${fmtTime(r.time)}</b><span>${fmtDist(r.dist)}</span>${r.mode === 'transit' && fareShort(P.fareCost(r)) ? `<span class="dc-fare">${fareShort(P.fareCost(r))}</span>` : ''}</div>
     </div>`;
   }
 
   function details(r: Route): string {
-    const head = `<div class="dd-head"><button class="icon-btn" data-back aria-label="${t('Back')}">${svg('<path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/>')}</button><div><b>${fmtTime(r.time)}</b> <span class="muted">(${fmtDist(r.dist)})</span>${r.via ? `<div class="muted small">${esc(t('via {road}', { road: r.via }))}</div>` : ''}${r.tolls?.length ? tollDetails(r) : ''}${onewayNote(r, true)}${trafficNote(r)}</div></div>`;
+    const head = `<div class="dd-head"><button class="icon-btn" data-back aria-label="${t('Back')}">${svg('<path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/>')}</button><div><b>${fmtTime(r.time)}</b> <span class="muted">(${fmtDist(r.dist)})</span>${r.via ? `<div class="muted small">${esc(t('via {road}', { road: r.via }))}</div>` : ''}${r.tolls?.length ? tollDetails(r) : ''}${onewayNote(r, true)}${trafficNote(r)}${simButton(r)}</div></div>`;
     if (r.mode !== 'transit') return head + `<ol class="steps">${r.legs[0].steps.map(stepRow).join('')}</ol>`;
     const rows: string[] = [`<li class="tr-place"><i class="dot o"></i><b>${esc(st.from!.label)}</b></li>`];
     r.legs.forEach((l, i) => {
@@ -299,6 +308,7 @@ export function createDirections(d: DirectionsDeps) {
     if (pricing) { const r = st.results[st.mode]?.[st.sel]; d.editPricing(pricing, pricing === 'tolls' && r?.tolls?.[0] ? { booth: r.tolls.find((x) => P.tollFee(x.booth).fee === null)?.booth ?? r.tolls[0].booth } : undefined); return; }
     if (t.closest('[data-schem]')) { const r = st.results[st.mode]?.[st.sel]; if (r) d.showOnSchematic(r); return; }
     if (t.closest('[data-back]')) { st.expanded = false; render(); sheet.to('half'); return; }
+    if (t.closest('[data-sim]')) { const r = st.results[st.mode]?.[st.sel]; if (r) d.simulate(r, st.to?.label ?? ''); return; }
     if (t.closest('[data-details]')) { st.expanded = true; render(); body.scrollTop = 0; sheet.to('full'); return; }
     const step = (t.closest('[data-at]') as HTMLElement | null)?.dataset.at;
     if (step) { const [lng, lat] = step.split(',').map(Number); map.flyTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 17), speed: 1.5 }); return; }

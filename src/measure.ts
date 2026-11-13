@@ -1,6 +1,7 @@
 // Ruler tool, after Google Earth's: click to add points, drag them, click the
 // first point to close a shape (area + perimeter). Distances are exact: the map
 // projection keeps one game metre equal to one metre of map scale.
+import { imperial, setUnits } from './units';
 import type { Map as MLMap, GeoJSONSource, MapMouseEvent } from 'maplibre-gl';
 import { fromLngLat, type XY } from './geo';
 import { elevationAt } from './dem';
@@ -10,8 +11,8 @@ type LL = [number, number];
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
 export function createMeasure(map: MLMap, hooks: { onOpen: () => void; onClose: () => void }) {
-  const st = { active: false, pts: [] as LL[], closed: false, imperial: false, drag: -1, hover: null as LL | null };
-  try { st.imperial = localStorage.getItem('atlas:units') === 'imperial'; } catch { /* storage blocked */ }
+  const st = { active: false, pts: [] as LL[], closed: false, drag: -1, hover: null as LL | null };
+  // units are the app-wide choice (units.ts); the buttons here change it everywhere
 
   const el = document.createElement('div');
   el.id = 'measure'; el.className = 'card'; el.hidden = true;
@@ -23,13 +24,13 @@ export function createMeasure(map: MLMap, hooks: { onOpen: () => void; onClose: 
   const total = () => { const r = ring(); let d = 0; for (let i = 1; i < r.length; i++) d += segLen(r[i - 1], r[i]); return d; };
   const area = () => { if (!st.closed || st.pts.length < 3) return 0; const p = st.pts.map(xy); let a = 0; for (let i = 0, j = p.length - 1; i < p.length; j = i++) a += (p[j][0] - p[i][0]) * (p[j][1] + p[i][1]); return Math.abs(a / 2); };
 
-  const fmtLen = (m: number) => st.imperial
+  const fmtLen = (m: number) => imperial()
     ? (m < 1609.344 * 0.1 ? `${Math.round(m * 3.28084).toLocaleString(locale())} ft` : `${fmtFixed(m / 1609.344, m < 16093 ? 2 : 1)} mi`)
     : (m < 1000 ? `${m < 100 ? fmtFixed(m, 1) : Math.round(m)} m` : `${fmtFixed(m / 1000, m < 10000 ? 2 : 1)} km`);
-  const fmtArea = (a: number) => st.imperial
+  const fmtArea = (a: number) => imperial()
     ? (a < 4046.86 * 0.5 ? `${Math.round(a * 10.7639).toLocaleString(locale())} ft²` : a < 2589988 ? t('{n} acres', { n: fmtFixed(a / 4046.86, 2) }) : `${fmtFixed(a / 2589988, 2)} mi²`)
     : (a < 10000 ? `${Math.round(a).toLocaleString(locale())} m²` : a < 1e6 ? `${fmtFixed(a / 10000, 2)} ha` : `${fmtFixed(a / 1e6, 2)} km²`);
-  const fmtH = (m: number) => (st.imperial ? `${Math.round(m * 3.28084).toLocaleString(locale())} ft` : `${Math.round(m).toLocaleString(locale())} m`);
+  const fmtH = (m: number) => (imperial() ? `${Math.round(m * 3.28084).toLocaleString(locale())} ft` : `${Math.round(m).toLocaleString(locale())} m`);
 
   /** Elevation along the path, sampled every ~10 m. */
   function profile() {
@@ -85,7 +86,7 @@ export function createMeasure(map: MLMap, hooks: { onOpen: () => void; onClose: 
     const hint = t(!st.pts.length ? 'Click on the map to add a point' : st.closed ? 'Drag points to adjust' : st.pts.length < 3 ? 'Click to add points' : 'Click to add points · click the first point to close');
     el.innerHTML = `
       <div class="m-head"><b>${t('Measure')}</b>
-        <div class="m-units" role="group" aria-label="${t('Units')}"><button data-u="m" class="${st.imperial ? '' : 'on'}">${t('Metric')}</button><button data-u="i" class="${st.imperial ? 'on' : ''}">${t('Imperial')}</button></div>
+        <div class="m-units" role="group" aria-label="${t('Units')}"><button data-u="m" class="${imperial() ? '' : 'on'}">${t('Metric')}</button><button data-u="i" class="${imperial() ? 'on' : ''}">${t('Imperial')}</button></div>
         <button class="icon-btn m-close" aria-label="${t('Close measure')}"><svg viewBox="0 0 24 24"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6z"/></svg></button></div>
       <div class="m-stats">
         <div><span>${st.closed ? t('Perimeter') : t('Total distance')}</span><b>${fmtLen(total())}</b></div>
@@ -102,7 +103,7 @@ export function createMeasure(map: MLMap, hooks: { onOpen: () => void; onClose: 
     const t = e.target as HTMLElement;
     if (t.closest('.m-close')) return close();
     const u = (t.closest('[data-u]') as HTMLElement | null)?.dataset.u;
-    if (u) { st.imperial = u === 'i'; try { localStorage.setItem('atlas:units', st.imperial ? 'imperial' : 'metric'); } catch { /* ignore */ } return render(); }
+    if (u) { setUnits(u === 'i' ? 'imperial' : 'metric'); return; } // main refreshes the tool
     const a = (t.closest('[data-a]') as HTMLElement | null)?.dataset.a;
     if (a === 'undo') undo();
     if (a === 'clear') { st.pts = []; st.closed = false; render(); }

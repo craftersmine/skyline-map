@@ -83,12 +83,19 @@
         <button class="menu-item" id="pricingBtn"><svg viewBox="0 0 24 24"><path d="M21.4 11.6l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7c0 .6.2 1.1.6 1.4l9 9c.4.4.9.6 1.4.6s1-.2 1.4-.6l7-7c.4-.4.6-.9.6-1.4s-.2-1-.6-1.4zM5.5 7a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg><span data-i18n="Tolls, fares &amp; currency">Tolls, fares &amp; currency</span></button>
         <a class="menu-item" id="tourLink" href="/showcase"><svg viewBox="0 0 24 24"><path d="M12 3 2 8l10 5 8-4v6h2V8L12 3zm-6 9.2V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-3.8l-6 3-6-3z"/></svg><span data-i18n="Product tour">Product tour</span></a>
         <a class="menu-item" id="coffeeLink" href="https://buymeacoffee.com/hjun1052" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M18 8h-1V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v7a6 6 0 0 0 6 6h2a6 6 0 0 0 5.7-4H18a4 4 0 0 0 0-8zm0 6h-1.1c.1-.3.1-.7.1-1v-3h1a2 2 0 0 1 0 4zM6 2h2v3H6zm4 0h2v3h-2zm4 0h2v3h-2z"/></svg><span data-i18n="Buy me a coffee">Buy me a coffee</span></a>
+        <a class="menu-item" id="githubLink" href="https://github.com/hjun1052/skyline-map" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.6 2 12.2c0 4.5 2.9 8.3 6.8 9.6.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.4-3.4-1.4-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.6 2.4 1.1 2.9.9.1-.7.4-1.1.6-1.4-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.8 1a9.5 9.5 0 0 1 5 0c1.9-1.3 2.8-1 2.8-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5A10.2 10.2 0 0 0 22 12.2C22 6.6 17.5 2 12 2z"/></svg><span data-i18n="Source code on GitHub">Source code on GitHub</span></a>
+        <a class="menu-item" id="issuesLink" href="https://github.com/hjun1052/skyline-map/issues/new/choose" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm0 14H5.2L4 17.2V4h16v12zM11 12h2v2h-2zm0-6h2v4h-2z"/></svg><span data-i18n="Report a bug or suggest an idea">Report a bug or suggest an idea</span></a>
         <button class="menu-item" data-consent><svg viewBox="0 0 24 24"><path d="M21.9 11.2a3 3 0 0 1-3.6-2.9 3 3 0 0 1-3.6-3.6A2 2 0 0 1 13 2.1 10 10 0 1 0 21.9 11.2zM8 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm-1 6a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm6 3a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg><span data-i18n="Cookie settings">Cookie settings</span></button>
         <button class="menu-item" id="fitCity"><svg viewBox="0 0 24 24"><path d="M5 15H3v4a2 2 0 0 0 2 2h4v-2H5v-4zM5 5h4V3H5a2 2 0 0 0-2 2v4h2V5zm14-2h-4v2h4v4h2V5a2 2 0 0 0-2-2zm0 16h-4v2h4a2 2 0 0 0 2-2v-4h-2v4zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg><span data-i18n="Show whole city">Show whole city</span></button>
       </section>
       <section id="langSection">
         <h3 data-i18n="Language">Language</h3>
         <div class="lang-switch" role="radiogroup" aria-label="Language"></div>
+        <p class="lang-credit"><span data-i18n="Russian translation:">Russian translation:</span> <a href="https://github.com/craftersmine" target="_blank" rel="noopener">craftersmine</a></p>
+      </section>
+      <section id="unitsSection">
+        <h3 data-i18n="Units">Units</h3>
+        <div class="unit-switch" role="radiogroup" aria-label="Units" data-i18n-aria="Units"></div>
       </section>
       <section id="lineList"></section>
       <section class="muted small" id="about">
@@ -136,6 +143,7 @@
         <span><b data-i18n="Drop a .cslmap file">Drop a .cslmap file</b> <span data-i18n="or click to browse">or click to browse</span></span>
         <span class="muted small" data-i18n=".cslmap and .cslmap.gz supported">.cslmap and .cslmap.gz supported</span>
       </label>
+      <p class="export-guide"><a href="/blog/cities-skylines-city-map.html" target="_blank" rel="noopener" data-i18n="How to export your city with CSLMapView">How to export your city with CSLMapView</a></p>
       <button class="tour-link sample-link" id="sampleBtn" type="button">
         <span class="sample-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M15 11V5l-3-3-3 3v2H3v14h18V11h-6zm-8 8H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm6 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V9h2v2zm0-4h-2V5h2v2zm6 12h-2v-2h2v2zm0-4h-2v-2h2v2z"/></svg></span>
         <span class="tour-text"><b data-i18n="Try a sample city">Try a sample city</b><span data-i18n="No export yet? Open Seorang, a real city of 9,600 buildings and 37 transit lines.">No export yet? Open Seorang, a real city of 9,600 buildings and 37 transit lines.</span></span>
@@ -155,7 +163,7 @@
         <span class="tour-text"><b data-i18n="See what Skyline Map can do">See what Skyline Map can do</b><span data-i18n="A tour of maps, directions, transit maps and more, from the real app.">A tour of maps, directions, transit maps and more, from the real app.</span></span>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.3 5.3 7.9 6.7l5.3 5.3-5.3 5.3 1.4 1.4 6.7-6.7z"/></svg>
       </a>
-      <p class="guides"><span data-i18n="New to CSLMapView?">New to CSLMapView?</span> <a href="/blog/" data-i18n="Read the guides">Read the guides</a></p>
+      <p class="guides"><span data-i18n="New to CSLMapView?">New to CSLMapView?</span> <a href="/blog/" data-i18n="Read the guides">Read the guides</a><span class="guides-sep" aria-hidden="true">·</span><a href="https://github.com/hjun1052/skyline-map" target="_blank" rel="noopener" data-i18n="Open source on GitHub">Open source on GitHub</a></p>
       <div id="localMaps"></div>
     </div>
   </div>

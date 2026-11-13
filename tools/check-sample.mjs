@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 
-const CHECKS = ['access', 'oneway', 'districts', 'transit', 'reach', 'discover', 'closure', 'schematic', 'tolls', 'groups', 'route-geometry'];
+const CHECKS = ['access', 'oneway', 'districts', 'transit', 'reach', 'discover', 'closure', 'schematic', 'tolls', 'groups', 'route-geometry', 'nav'];
 
 const dir = mkdtempSync(join(tmpdir(), 'skyline-sample-'));
 const file = join(dir, 'Seorang.cslmap');

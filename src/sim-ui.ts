@@ -2,6 +2,7 @@
 // and checks it shows the same city state (sim/validate.ts); this module shows the outcome, the map overlays
 // (traffic, land value, noise, pollution, crime) and the extra rows in the info panels. Values appear only
 // on objects the check matched; city-wide figures are labelled as covering the whole save.
+import { fmtSpeed } from './units';
 import type { Map as MLMap, ExpressionSpecification } from 'maplibre-gl';
 import type { BuiltCity } from './build';
 import type { SimResult, SimData, SimFailure, SimLine } from './sim';
@@ -360,8 +361,8 @@ export function createSim(map: MLMap, deps: { worker: Worker; city: () => BuiltC
     let rows = row('Traffic', pct(tv));
     const tm = st.tm.get(id);
     if (tm) {
-      if (tm.kmh.length) rows += row('Speed limit (TM:PE)', tm.kmh.map((k) => (k >= 1000 ? t('No limit') : `${k} km/h`)).join(' · '));
-      else if (tm.typeDefault !== null) rows += row('Default speed for this road type (TM:PE)', `${tm.typeDefault} km/h`);
+      if (tm.kmh.length) rows += row('Speed limit (TM:PE)', tm.kmh.map((k) => (k >= 1000 ? t('No limit') : fmtSpeed(k))).join(' · '));
+      else if (tm.typeDefault !== null) rows += row('Default speed for this road type (TM:PE)', fmtSpeed(tm.typeDefault));
       if (tm.parking && !(tm.parking[0] && tm.parking[1])) rows += row('Parking', tm.parking[0] || tm.parking[1] ? t('One side only') : t('Not allowed'));
     }
     return section(rows);

@@ -4,6 +4,7 @@ import * as maplibregl from 'maplibre-gl';
 import type { Map as MLMap } from 'maplibre-gl';
 import { HALF, toLngLat, fromLngLat, type XY } from './geo';
 import { t, fmtFixed } from './i18n';
+import { fmtArea } from './units';
 import { MODES } from './directions';
 import type { ReachGrid } from './reach';
 import type { Mode } from './router';
@@ -26,7 +27,6 @@ export function createReach(map: MLMap, deps: { worker: Worker; land: () => Dist
   const marker = new maplibregl.Marker({ element: pin, draggable: true, anchor: 'bottom' });
   marker.on('dragend', () => { const p = marker.getLngLat(); setPoint([p.lng, p.lat]); });
 
-  const fmtArea = (m2: number) => (m2 < 1e6 ? `${fmtFixed(m2 / 1e4, 1)} ha` : `${fmtFixed(m2 / 1e6, m2 < 1e7 ? 2 : 1)} km²`);
 
   function landAt(f: DistrictField | null, x: number, z: number) {
     if (!f) return true;
