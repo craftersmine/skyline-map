@@ -28,6 +28,8 @@ interface Join { node: number; extra: number; part?: Edge; snap?: { e: number; p
 
 interface Edge {
   id: number; a: number; b: number; len: number; pts: XY[]; cls: string; name: string; speed: number; bike: boolean; brunnel: string;
+  /** the speed limit comes from the segment type's lanes (else `speed` is a class default) */
+  limKnown: boolean;
   /** closed for the closure being analysed (see setClosure): unusable by every mode */
   x?: boolean;
   /** one-way: +1 traffic a→b, -1 b→a, 0 two-way; `sure` = backed by transit or keep-right evidence */
@@ -64,6 +66,14 @@ export interface Leg {
   ride?: number; wait?: number;
   /** ride legs: the stop nodes from boarding to alighting (maps the leg onto the schematic map) */
   stopIds?: number[];
+  /** driving legs: the road under each stretch of `coords`, in order (navigation simulation) */
+  spans?: Span[];
+}
+/** One road of a driving leg: from coords[i] on, driven at `v` m/s (as driving time counts it, traffic included when on). */
+export interface Span {
+  i: number; v: number; name: string; cls: string; brunnel: string;
+  /** posted limit in km/h, only when the export or the save's rules give one */
+  limit?: number;
 }
 interface TransitOpts { linePenalty?: Map<number, number>; transferPenalty?: number; walkFactor?: number }
 export interface TollPass { booth: number; name: string; road: string }
@@ -148,7 +158,7 @@ export class Router {
       const both = seg.name + ' ' + seg.icls;
       const e: Edge = {
         id: seg.id, a: node(seg.sn), b: node(seg.en), len: Math.max(1, len(pts)), pts, cls: c.cls, name: seg.customName,
-        speed: (lanes.speed > 0 && lanes.speed < 200 ? lanes.speed : DRIVE_DEFAULT[c.cls] ?? 30) / 3.6,
+        speed: (lanes.speed > 0 && lanes.speed < 200 ? lanes.speed : DRIVE_DEFAULT[c.cls] ?? 30) / 3.6, limKnown: lanes.speed > 0 && lanes.speed < 200,
         bike: lanes.bike || /Bicycle|Bike/i.test(seg.name), brunnel: /Tunnel/i.test(both) ? 'tunnel' : /Elevated|Bridge/i.test(both) ? 'bridge' : '',
         acc, gate: tolls?.gateOf.get(seg.id) ?? 0, ow: oneway?.dir.get(seg.id) ?? 0, sure: !!oneway && oneway.source.get(seg.id) !== 'prior' && oneway.source.has(seg.id), confirmed: oneway?.source.get(seg.id) === 'transit',
         hA: headRad(pts), hB: headRad([...pts].reverse()),
@@ -353,6 +363,23 @@ export class Router {
     if (mode === 'drive') return e.acc.drive && !(this.restrictBan && e.noCar?.[0] && e.noCar[1]);
     if (mode === 'walk' || mode === 'transit') return e.acc.walk;
     return e.acc.bike || e.acc.bikeWalk;
+  }
+  private byId: Map<number, Edge> | null = null;
+  /** Does this oriented piece run along its road's point order (start → end)? Trimmed and reversed pieces carry
+   *  their own points, so measure against the whole road. Only per-direction rules (spd) need the answer. */
+  private drivesForward(p: { ed: Edge; pts: XY[] }): boolean {
+    if (!p.ed.spd) return true;
+    this.byId ??= new Map(this.edges.map((e) => [e.id, e]));
+    const whole = this.byId.get(p.ed.id)?.pts ?? p.ed.pts, a = whole[0], z = whole[whole.length - 1];
+    if (Math.hypot(a[0] - z[0], a[1] - z[1]) > 0.5) return nearestOnLine(p.pts[p.pts.length - 1], whole).along >= nearestOnLine(p.pts[0], whole).along;
+    // a loop starts and ends at one point: judge by the first step, the shorter way round
+    const L = len(whole), d = nearestOnLine(p.pts[1], whole).along - nearestOnLine(p.pts[0], whole).along;
+    return ((d % L) + L) % L < L / 2;
+  }
+  /** The moving speed cost() drives an edge at (m/s), without its fixed seconds per minor street. */
+  private driveSpeed(e: Edge, fwd: boolean) {
+    const v = e.spd ? e.spd[fwd ? 0 : 1] : e.speed;
+    return (v * (/^(motorway|motorway_link|trunk)$/.test(e.cls) ? 1 : 0.85)) / (this.trafficOn && e.tf ? e.tf : 1);
   }
   private cost(e: Edge, mode: Mode, fwd?: boolean): number {
     // cars rarely hold the posted limit in town (traffic, signals): 85% on ordinary streets, full speed on highways
@@ -828,7 +855,15 @@ export class Router {
     if (!parts.length && meet) coords.push(meet);
     let dist = 0, time = 0;
     for (const p of parts) { dist += p.ed.len; time += this.cost(p.ed, mode); }
-    for (const p of parts) coords.push(...p.pts);
+    const spans: Span[] = [];
+    for (const p of parts) {
+      if (mode === 'drive') {
+        const e = p.ed, fwd = this.drivesForward(p);
+        const lim = e.spd ? e.spd[fwd ? 0 : 1] * 3.6 : e.limKnown ? e.speed * 3.6 : 0;
+        spans.push({ i: coords.length, v: this.driveSpeed(e, fwd), name: e.name, cls: e.cls, brunnel: e.brunnel, ...(lim ? { limit: Math.round(lim) } : {}) });
+      }
+      coords.push(...p.pts);
+    }
     coords.push(this.endPoint(to, coords[coords.length - 1]));
     const kind = mode === 'drive' ? 'drive' : mode === 'bike' ? 'bike' : 'walk';
     const steps = turnSteps(parts, mode, (ed) => this.cost(ed, mode));
@@ -855,7 +890,7 @@ export class Router {
     const named = new Map<string, number>();
     for (const p of parts) if (p.ed.name) named.set(p.ed.name, (named.get(p.ed.name) ?? 0) + p.ed.len);
     const via = [...named].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
-    return { mode, dist, time, via, legs: [{ kind, dist, time, coords: coords.map((p) => toLngLat(p[0], p[1])), steps }], ...(tolls.length ? { tolls } : {}), ...(tolls.length && this.avoidTolls ? { tollsUnavoidable: true } : {}) };
+    return { mode, dist, time, via, legs: [{ kind, dist, time, coords: coords.map((p) => toLngLat(p[0], p[1])), steps, ...(spans.length ? { spans } : {}) }], ...(tolls.length ? { tolls } : {}), ...(tolls.length && this.avoidTolls ? { tollsUnavoidable: true } : {}) };
   }
 
   // ------------------------------------------------------------ transit

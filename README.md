@@ -14,6 +14,7 @@
 - **A real map:** roads at their true width, buildings and lots, water, forests, terrain and labels, in Default, Terrain and Night styles, with 3D buildings.
 - **Search and info panels:** stations, districts, roads, buildings and lines.
 - **Directions:** by car, transit, walking and bike, with alternatives, turn-by-turn steps, transfers, tolls and fares.
+- **Navigation simulation:** drive a car route virtually with a tilted follow camera, turn-by-turn banner, optional voice guidance (English, Korean, Russian) and playback controls.
 - **Transit map:** a metro-style schematic drawn automatically from your lines.
 - **How far can I get?** Areas reachable in 15, 30, 45 or 60 minutes.
 - **What if it closes?** Close a road, bridge or station and see which trips and lines break.
